@@ -24,20 +24,32 @@
         <!-- Official Store Logo -->
         <img src="./logo.png" alt="Rohith Groceries Official Logo" class="login-logo-img" />
         <h1 class="login-title">Rohith Groceries</h1>
-        <p class="login-subtitle">Sign in to access store portal & online groceries</p>
+        <p class="login-subtitle">Fresh groceries delivered to your doorstep</p>
       </div>
 
-      <!-- Quick Demo Login Banner -->
-      <div class="demo-credentials-banner">
-        <div>
-          <strong>Demo Login:</strong> rohith / grocery123
-        </div>
-        <button type="button" id="fillDemoBtn" class="btn-fill-demo">Auto Fill</button>
+      <!-- Customer: Direct Enter Store (No Login Required) -->
+      <div style="margin-bottom: 1.5rem;">
+        <button type="button" id="customerEnterBtn" class="btn-primary-auth" style="width:100%; justify-content:center; font-size:1.1rem; padding:1rem;">
+          🛒 Enter Store
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+        <p style="text-align:center; font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem;">Browse products & place orders — no login required</p>
       </div>
 
+      <!-- Divider -->
+      <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1.25rem;">
+        <div style="flex:1; height:1px; background:var(--border-light);"></div>
+        <span style="font-size:0.775rem; color:var(--text-muted); font-weight:700; white-space:nowrap;">Admin Login Only</span>
+        <div style="flex:1; height:1px; background:var(--border-light);"></div>
+      </div>
+
+      <!-- Admin Login Form -->
       <form id="loginForm" class="auth-form" novalidate>
         <div class="form-group">
-          <label for="usernameInput" class="form-label">Username / Mobile ID</label>
+          <label for="usernameInput" class="form-label">Admin Username</label>
           <div class="input-container">
             <span class="input-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -45,12 +57,12 @@
                 <circle cx="12" cy="7" r="4"></circle>
               </svg>
             </span>
-            <input type="text" id="usernameInput" class="form-control" placeholder="Enter your ID (e.g. rohith)" required />
+            <input type="text" id="usernameInput" class="form-control" placeholder="Enter username" />
           </div>
         </div>
 
         <div class="form-group">
-          <label for="passwordInput" class="form-label">Password</label>
+          <label for="passwordInput" class="form-label">Admin Password</label>
           <div class="input-container">
             <span class="input-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -58,14 +70,14 @@
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
               </svg>
             </span>
-            <input type="password" id="passwordInput" class="form-control" placeholder="Enter password" required />
+            <input type="password" id="passwordInput" class="form-control" placeholder="Enter password" />
           </div>
         </div>
 
         <div id="authError" class="auth-error-box hidden"></div>
 
-        <button type="submit" class="btn-primary-auth">
-          <span>Enter Store</span>
+        <button type="submit" class="btn-primary-auth" style="background: linear-gradient(135deg, #1e40af, #1e3a8a);">
+          <span>🔐 Admin Login</span>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="5" y1="12" x2="19" y2="12"></line>
             <polyline points="12 5 19 12 12 19"></polyline>
@@ -121,7 +133,8 @@
             <span>Our Products</span>
           </a>
 
-          <a href="#orders" class="nav-link-item" data-nav-target="orders">
+
+          <a href="#orders" class="nav-link-item admin-only-nav" data-nav-target="orders">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
               <polyline points="14 2 14 8 20 8"></polyline>
@@ -132,7 +145,7 @@
             <span class="nav-counter-badge" id="orderPlacedNavBadge">0</span>
           </a>
 
-          <a href="#transactions" class="nav-link-item" data-nav-target="transactions">
+          <a href="#transactions" class="nav-link-item admin-only-nav" data-nav-target="transactions">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="12" y1="1" x2="12" y2="23"></line>
               <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
@@ -430,8 +443,8 @@
                 <option value="name-az">Name: A to Z</option>
               </select>
 
-              <!-- Add New Product Button -->
-              <button type="button" class="btn-add-new-prod" onclick="openAddProductModal()">
+              <!-- Add New Product Button (Admin Only) -->
+              <button type="button" class="btn-add-new-prod admin-only-btn" onclick="openAddProductModal()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -439,8 +452,8 @@
                 <span>+ Add New Product</span>
               </button>
 
-              <!-- Manage Stock Mode Toggle -->
-              <button type="button" class="btn-toggle-inventory-mode" id="toggleManagerModeBtn" onclick="toggleStoreManagerMode()">
+              <!-- Manage Stock Mode Toggle (Admin Only) -->
+              <button type="button" class="btn-toggle-inventory-mode admin-only-btn" id="toggleManagerModeBtn" onclick="toggleStoreManagerMode()">
                 <span>⚙️ Manage Stock</span>
               </button>
             </div>
@@ -483,34 +496,16 @@
         
         <div class="orders-top-control-bar">
           <div>
-            <h1 style="font-size: 1.75rem; font-weight: 900; color: var(--text-main);">Customer Orders Placed</h1>
-            <p style="font-size: 0.85rem; color: var(--text-muted);">Track customer orders, scheduled delivery dates, and real-time dispatch</p>
+            <h1 style="font-size: 1.75rem; font-weight: 900; color: var(--text-main);">Customer Orders</h1>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">All customer orders sent via WhatsApp — Admin view only</p>
           </div>
 
-          <!-- Controls: Auto Mode Toggle, Fast Forward Demo, Clear Orders -->
+          <!-- Admin controls: Delete old orders -->
           <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
-            <button type="button" class="auto-timer-badge" id="autoTimerStatusPill" onclick="toggleAutoTimerMode()">
-              🟢 Auto Timer: ON
-            </button>
-
-            <button type="button" class="btn-order-action" onclick="fastForwardOrderTimer()" title="Simulate next status stage immediately">
-              ⚡ Fast-Forward Timer
-            </button>
-
             <button type="button" class="btn-order-action danger" onclick="handleClearPastOrders()">
-              🧹 Clear Past Orders
+              🧹 Clear All Orders
             </button>
           </div>
-        </div>
-
-        <!-- Status Filter Chips -->
-        <div class="category-filter-chips" style="margin-bottom: 1.5rem;">
-          <button type="button" class="filter-chip orders-chip active" data-order-status="all" onclick="filterOrdersByStatus('all')">All Orders</button>
-          <button type="button" class="filter-chip orders-chip" data-order-status="Placed" onclick="filterOrdersByStatus('Placed')">🟡 Placed</button>
-          <button type="button" class="filter-chip orders-chip" data-order-status="Packed" onclick="filterOrdersByStatus('Packed')">🔵 Packed</button>
-          <button type="button" class="filter-chip orders-chip" data-order-status="Out for Delivery" onclick="filterOrdersByStatus('Out for Delivery')">🟣 Out for Delivery</button>
-          <button type="button" class="filter-chip orders-chip" data-order-status="Delivered" onclick="filterOrdersByStatus('Delivered')">🟢 Delivered</button>
-          <button type="button" class="filter-chip orders-chip" data-order-status="Cancelled" onclick="filterOrdersByStatus('Cancelled')">🔴 Cancelled</button>
         </div>
 
         <!-- Orders List Grid -->
@@ -689,7 +684,7 @@
             </div>
 
             <div class="form-group">
-              <label for="custPhoneInput" class="form-label">Phone Number (For OTP/SMS) <span style="color:#ef4444;">*</span></label>
+              <label for="custPhoneInput" class="form-label">Phone Number <span style="color:#ef4444;">*</span></label>
               <input type="tel" id="custPhoneInput" class="form-control" placeholder="e.g. 9876543210" required />
             </div>
           </div>
@@ -717,18 +712,15 @@
             <input type="text" id="custLandmarkInput" class="form-control" placeholder="Near Clock Tower / Temple" />
           </div>
 
-          <!-- Payment Mode -->
+          <!-- Payment Mode: Cash on Delivery ONLY -->
           <div class="form-group">
             <label class="form-label">Payment Mode</label>
-            <div style="display:flex; gap:1.25rem;">
-              <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.85rem; font-weight:700; cursor:pointer;">
-                <input type="radio" name="payMethod" value="UPI (GPay / PhonePe)" checked />
-                <span>UPI (GPay / PhonePe)</span>
-              </label>
-              <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.85rem; font-weight:700; cursor:pointer;">
-                <input type="radio" name="payMethod" value="Cash on Delivery (COD)" />
-                <span>Cash on Delivery (COD)</span>
-              </label>
+            <div style="display:flex; align-items:center; gap:0.75rem; background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; padding:0.75rem 1rem;">
+              <span style="font-size:1.2rem;">💵</span>
+              <div>
+                <div style="font-weight:800; color:#166534;">Cash on Delivery (COD)</div>
+                <div style="font-size:0.775rem; color:#4b7c4b;">Pay when your groceries arrive at your doorstep</div>
+              </div>
             </div>
           </div>
 
@@ -757,12 +749,9 @@
         <div class="modal-dialog-body" id="orderConfirmationMsgDetails">
           <!-- Populated by script.js -->
         </div>
-        <div style="padding:1rem 1.5rem 1.5rem; display:flex; gap:0.75rem; justify-content:flex-end; border-top:1px solid var(--border-light);">
-          <button type="button" class="btn-hero-secondary" onclick="closeOrderSuccessModal(); switchTab('orders');" style="padding:0.65rem 1.25rem;">
-            View in Order Placed
-          </button>
-          <button type="button" class="btn-hero-primary" onclick="closeOrderSuccessModal();" style="padding:0.65rem 1.25rem;">
-            Continue Shopping
+        <div style="padding:1rem 1.5rem 1.5rem; display:flex; gap:0.75rem; justify-content:center; border-top:1px solid var(--border-light);">
+          <button type="button" class="btn-hero-primary" onclick="closeOrderSuccessModal(); switchTab('products');" style="padding:0.85rem 2rem; font-size:1rem;">
+            🛒 Continue Shopping
           </button>
         </div>
       </div>
