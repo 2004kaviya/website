@@ -116,8 +116,8 @@ const DEFAULT_STORE_INFO = {
   proprietor: "Rohith Kumar",
   hours: "Mon - Sun (6:30 AM – 10:30 PM)",
   address: "#42, Market Main Road, Near Clock Tower, Gandhi Bazaar, Bengaluru - 560004",
-  phone: "8940826965",
-  whatsapp: "8940826965",  // Shop owner WhatsApp — orders will be sent here
+  phone: "9876543210",
+  whatsapp: "9876543211",
   email: "orders@rohithgroceries.com"
 };
 
@@ -132,35 +132,61 @@ class AppStore {
     this.cart = JSON.parse(localStorage.getItem("rg_cart")) || {};
     this.orders = JSON.parse(localStorage.getItem("rg_orders")) || [];
     this.transactions = JSON.parse(localStorage.getItem("rg_transactions")) || [];
-
-    // UI State
+    
+    // Auto-Timer & Automation Settings
+    this.autoTimerEnabled = JSON.parse(localStorage.getItem("rg_auto_timer")) ?? true;
     this.isManagerMode = false;
     this.currentCategory = "all";
     this.searchQuery = "";
     this.sortOption = "featured";
+    this.orderFilterStatus = "all";
 
-    // Pending order (built on checkout, saved only when WhatsApp is clicked)
-    this.pendingOrder = null;
+    // Initialize sample order if brand new
+    if (this.orders.length === 0) {
+      this.initSeedOrder();
+    }
   }
 
-  isAdmin() {
-    return this.currentUser && this.currentUser.role === "admin";
-  }
+  initSeedOrder() {
+    const seedOrder = {
+      orderId: "RG-10492",
+      txnId: "TXN-10492",
+      timestamp: "26 Aug 2026, 11:30 AM",
+      deliveryDate: "Today, 26 Aug (Evening 5-8 PM)",
+      otp: "4821",
+      customer: {
+        name: "Suresh Kumar",
+        phone: "9845123456",
+        address: "#14, 2nd Cross, Gandhi Bazaar, Bengaluru - 560004",
+        landmark: "Near National High School"
+      },
+      items: [
+        { id: 1, nameEn: "Premium Toor Dal (Arhar)", nameTa: "துவரம் பருப்பு", unit: "1 kg", price: 165, quantity: 2 },
+        { id: 39, nameEn: "Tata Salt Vacuum Evaporated", nameTa: "டாடா உப்பு", unit: "1 kg", price: 28, quantity: 2 },
+        { id: 42, nameEn: "Madhur Pure Sugar", nameTa: "சர்க்கரை", unit: "1 kg", price: 52, quantity: 1 }
+      ],
+      totalAmount: 438,
+      paymentMethod: "UPI (GPay / PhonePe)",
+      paymentStatus: "Paid",
+      orderStatus: "Delivered",
+      placedTime: Date.now() - 3600000
+    };
 
-  loginAsCustomer() {
-    this.currentUser = { role: "customer", loginTime: new Date().toISOString() };
-    localStorage.setItem("rg_user", JSON.stringify(this.currentUser));
-  }
+    const seedTxn = {
+      txnId: "TXN-10492",
+      orderId: "RG-10492",
+      date: "26 Aug 2026, 11:30 AM",
+      customerName: "Suresh Kumar",
+      phone: "9845123456",
+      itemCount: 5,
+      amount: 438,
+      paymentMode: "UPI",
+      status: "Settled / Paid"
+    };
 
-  loginAsAdmin() {
-    this.currentUser = { username: "admin", role: "admin", loginTime: new Date().toISOString() };
-    localStorage.setItem("rg_user", JSON.stringify(this.currentUser));
-  }
-
-  logout() {
-    this.currentUser = null;
-    this.pendingOrder = null;
-    localStorage.removeItem("rg_user");
+    this.orders.push(seedOrder);
+    this.transactions.push(seedTxn);
+    this.saveOrdersAndTransactions();
   }
 
   saveProducts() {
@@ -180,7 +206,17 @@ class AppStore {
     localStorage.setItem("rg_transactions", JSON.stringify(this.transactions));
   }
 
-  // --- Product Management (Admin Only) ---
+  login(username) {
+    this.currentUser = { username: username, loginTime: new Date().toISOString() };
+    localStorage.setItem("rg_user", JSON.stringify(this.currentUser));
+  }
+
+  logout() {
+    this.currentUser = null;
+    localStorage.removeItem("rg_user");
+  }
+
+  // --- Product Management (Add, Edit, Delete, Stock Toggle) ---
   addProduct(newProd) {
     newProd.id = Date.now();
     this.products.unshift(newProd);
@@ -207,9 +243,9 @@ class AppStore {
     if (prod) {
       if (prod.stock > 0) {
         prod.prevStock = prod.stock;
-        prod.stock = 0;
+        prod.stock = 0; // Out of stock
       } else {
-        prod.stock = prod.prevStock || 50;
+        prod.stock = prod.prevStock || 50; // Restore in stock
       }
       this.saveProducts();
     }
@@ -219,10 +255,17 @@ class AppStore {
   addToCart(productId, qty = 1) {
     const prod = this.products.find(p => p.id === productId);
     if (!prod || prod.stock <= 0) return;
-    if (!this.cart[productId]) this.cart[productId] = 0;
+
+    if (!this.cart[productId]) {
+      this.cart[productId] = 0;
+    }
     this.cart[productId] += qty;
-    if (this.cart[productId] > prod.stock) this.cart[productId] = prod.stock;
-    if (this.cart[productId] <= 0) delete this.cart[productId];
+    if (this.cart[productId] > prod.stock) {
+      this.cart[productId] = prod.stock;
+    }
+    if (this.cart[productId] <= 0) {
+      delete this.cart[productId];
+    }
     this.saveCart();
   }
 
@@ -237,10 +280,16 @@ class AppStore {
     }, 0);
   }
 
-  // --- Build pending order (NOT saved yet — saved only when WhatsApp is clicked) ---
-  buildPendingOrder(customerData, deliveryDateSlot) {
+  // --- Place Order with Auto Stock Deduction & OTP ---
+  placeOrder(customerData, paymentMethod, deliveryDateSlot) {
     const cartItems = Object.entries(this.cart).map(([pId, qty]) => {
       const prod = this.products.find(p => p.id === parseInt(pId));
+      
+      // Auto-deduct stock!
+      if (prod) {
+        prod.stock = Math.max(0, prod.stock - qty);
+      }
+
       return {
         id: prod.id,
         nameEn: prod.nameEn,
@@ -251,79 +300,66 @@ class AppStore {
       };
     });
 
+    this.saveProducts(); // Save updated stocks
+
     const subtotal = this.getCartSubtotal();
     const deliveryFee = subtotal >= 300 ? 0 : 30;
     const finalAmount = subtotal + deliveryFee;
     const orderNum = Math.floor(10000 + Math.random() * 90000);
     const orderId = `RG-${orderNum}`;
     const txnId = `TXN-${orderNum + 500}`;
+    const otpCode = Math.floor(1000 + Math.random() * 9000).toString();
     const now = new Date();
     const timestamp = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ", " +
                       now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    this.pendingOrder = {
-      orderId,
-      txnId,
-      timestamp,
+    // Create Order Record
+    const newOrder = {
+      orderId: orderId,
+      txnId: txnId,
+      timestamp: timestamp,
       deliveryDate: deliveryDateSlot,
+      otp: otpCode,
       customer: customerData,
       items: cartItems,
       totalAmount: finalAmount,
-      paymentMethod: "Cash on Delivery (COD)",
-      paymentStatus: "Pending COD",
+      paymentMethod: paymentMethod,
+      paymentStatus: paymentMethod.includes("COD") ? "Pending COD" : "Paid",
       orderStatus: "Placed",
       placedTime: Date.now()
     };
 
-    return this.pendingOrder;
-  }
-
-  // --- Confirm order ONLY when WhatsApp is clicked ---
-  confirmAndSavePendingOrder() {
-    if (!this.pendingOrder) return null;
-    const order = this.pendingOrder;
-
-    // Auto-deduct stock now that order is confirmed
-    order.items.forEach(item => {
-      const prod = this.products.find(p => p.id === item.id);
-      if (prod) prod.stock = Math.max(0, prod.stock - item.quantity);
-    });
-    this.saveProducts();
-
+    // Create Transaction Record
     const newTxn = {
-      txnId: order.txnId,
-      orderId: order.orderId,
-      date: order.timestamp,
-      customerName: order.customer.name,
-      phone: order.customer.phone,
-      itemCount: order.items.reduce((acc, i) => acc + i.quantity, 0),
-      amount: order.totalAmount,
-      paymentMode: "Cash on Delivery",
-      status: "Pending Delivery"
+      txnId: txnId,
+      orderId: orderId,
+      date: timestamp,
+      customerName: customerData.name,
+      phone: customerData.phone,
+      itemCount: cartItems.reduce((acc, item) => acc + item.quantity, 0),
+      amount: finalAmount,
+      paymentMode: paymentMethod.includes("COD") ? "Cash on Delivery" : "UPI / Card",
+      status: paymentMethod.includes("COD") ? "Pending Delivery" : "Settled / Paid"
     };
 
-    this.orders.unshift(order);
+    this.orders.unshift(newOrder);
     this.transactions.unshift(newTxn);
     this.saveOrdersAndTransactions();
-
-    // Clear cart after confirmed
     this.cart = {};
     this.saveCart();
-    this.pendingOrder = null;
 
-    return order;
+    return { order: newOrder, txn: newTxn };
   }
 
-  // --- Delete orders (Admin Only) ---
+  // --- Delete Single Order & Clear Completed Orders ---
   deleteOrder(orderId) {
     this.orders = this.orders.filter(o => o.orderId !== orderId);
     this.transactions = this.transactions.filter(t => t.orderId !== orderId);
     this.saveOrdersAndTransactions();
   }
 
-  clearAllOrders() {
-    this.orders = [];
-    this.transactions = [];
+  clearCompletedOrders() {
+    this.orders = this.orders.filter(o => o.orderStatus !== "Delivered" && o.orderStatus !== "Cancelled");
     this.saveOrdersAndTransactions();
   }
 }
@@ -332,15 +368,20 @@ class AppStore {
 const store = new AppStore();
 
 // ==========================================================================
-// 3. UI CONTROLLER & APP INITIALIZATION
+// 3. UI CONTROLLER & EVENT WIRING
 // ==========================================================================
 document.addEventListener("DOMContentLoaded", () => {
   initAuthUI();
   initNavigation();
   updateStoreContactDisplay();
+  renderProductsCatalog();
   updateCartBadge();
+  renderOrdersDashboard();
+  renderTransactionHistory();
   setupEventListeners();
+  startAutoTimerEngine();
 
+  // Check login state
   if (store.currentUser) {
     showAppScreen();
   } else {
@@ -348,139 +389,119 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// --- Auth Handling ---
+// --- Auth Management ---
 function initAuthUI() {
-  // Customer "Enter Store" button — direct entry without credentials
-  const customerEnterBtn = document.getElementById("customerEnterBtn");
-  if (customerEnterBtn) {
-    customerEnterBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      store.loginAsCustomer();
-      showAppScreen();
+  const loginForm = document.getElementById("loginForm");
+  const fillDemoBtn = document.getElementById("fillDemoBtn");
+  const usernameInput = document.getElementById("usernameInput");
+  const passwordInput = document.getElementById("passwordInput");
+  const authError = document.getElementById("authError");
+
+  if (fillDemoBtn) {
+    fillDemoBtn.addEventListener("click", () => {
+      usernameInput.value = "rohith";
+      passwordInput.value = "grocery123";
+      authError.classList.add("hidden");
     });
   }
-
-  // Admin login form — requires admin / admin
-  const loginForm = document.getElementById("loginForm");
-  const authError = document.getElementById("authError");
 
   if (loginForm) {
     loginForm.addEventListener("submit", (e) => {
       e.preventDefault();
-      const usernameInput = document.getElementById("usernameInput");
-      const passwordInput = document.getElementById("passwordInput");
-      const username = usernameInput ? usernameInput.value.trim() : "";
-      const password = passwordInput ? passwordInput.value.trim() : "";
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value.trim();
 
-      if (username === "admin" && password === "admin") {
-        if (authError) authError.classList.add("hidden");
-        store.loginAsAdmin();
-        showToast("Admin logged in successfully!");
-        showAppScreen();
-      } else {
-        if (authError) {
-          authError.textContent = "Incorrect admin credentials. Please enter valid admin username and password.";
-          authError.classList.remove("hidden");
-        }
+      if (!username || !password) {
+        authError.textContent = "Please enter both ID/Mobile and Password.";
+        authError.classList.remove("hidden");
+        return;
       }
+
+      authError.classList.add("hidden");
+      store.login(username);
+      showToast(`Welcome back, ${username}!`);
+      showAppScreen();
     });
   }
 
   const logoutBtn = document.getElementById("logoutBtn");
   if (logoutBtn) {
-    logoutBtn.addEventListener("click", (e) => {
-      e.preventDefault();
+    logoutBtn.addEventListener("click", () => {
       store.logout();
+      showToast("Logged out successfully.");
       showLoginScreen();
     });
   }
 }
 
 function showLoginScreen() {
-  document.getElementById("loginScreen")?.classList.remove("hidden");
-  document.getElementById("appScreen")?.classList.add("hidden");
+  document.getElementById("loginScreen").classList.remove("hidden");
+  document.getElementById("appScreen").classList.add("hidden");
 }
 
 function showAppScreen() {
-  document.getElementById("loginScreen")?.classList.add("hidden");
-  document.getElementById("appScreen")?.classList.remove("hidden");
-
-  applyRoleVisibility();
+  document.getElementById("loginScreen").classList.add("hidden");
+  document.getElementById("appScreen").classList.remove("hidden");
   switchTab("home");
-  renderProductsCatalog();
   updateCartBadge();
 }
 
-// Show/hide elements based on user role (Admin vs Customer)
-function applyRoleVisibility() {
-  const isAdmin = store.isAdmin();
-
-  // Admin-only nav tabs (Order Placed, Transaction History)
-  document.querySelectorAll(".admin-only-nav").forEach(el => {
-    el.style.display = isAdmin ? "" : "none";
-  });
-
-  // Admin-only product toolbar buttons (Add New, Manage Stock)
-  document.querySelectorAll(".admin-only-btn").forEach(el => {
-    el.style.display = isAdmin ? "" : "none";
-  });
-
-  // Admin badge in nav
-  const adminBadge = document.getElementById("adminRoleBadge");
-  if (adminBadge) adminBadge.style.display = isAdmin ? "inline-flex" : "none";
-
-  // Edit Store details button
-  document.querySelectorAll(".btn-edit-contact").forEach(el => {
-    el.style.display = isAdmin ? "" : "none";
-  });
-
-  // Turn off manager mode if not admin
-  if (!isAdmin) {
-    store.isManagerMode = false;
-  }
-}
-
-// --- Navigation Handling ---
+// --- Navigation Tabs ---
 function initNavigation() {
-  document.querySelectorAll("[data-nav-target]").forEach(link => {
+  const navLinks = document.querySelectorAll("[data-nav-target]");
+  navLinks.forEach(link => {
     link.addEventListener("click", (e) => {
       e.preventDefault();
-      const target = link.getAttribute("data-nav-target");
-      if (target) switchTab(target);
-      document.getElementById("navMenuStraight")?.classList.remove("mobile-open");
+      const targetSection = link.getAttribute("data-nav-target");
+      switchTab(targetSection);
+      
+      const navMenu = document.getElementById("navMenuStraight");
+      if (navMenu) navMenu.classList.remove("mobile-open");
     });
   });
 
-  document.getElementById("mobileNavToggle")?.addEventListener("click", () => {
-    document.getElementById("navMenuStraight")?.classList.toggle("mobile-open");
-  });
+  const mobileToggle = document.getElementById("mobileNavToggle");
+  if (mobileToggle) {
+    mobileToggle.addEventListener("click", () => {
+      const navMenu = document.getElementById("navMenuStraight");
+      if (navMenu) navMenu.classList.toggle("mobile-open");
+    });
+  }
 }
 
 window.switchTab = function(sectionName) {
-  // Guard: Customers cannot access orders or transactions
-  if (!store.isAdmin() && (sectionName === "orders" || sectionName === "transactions")) {
-    showToast("Please log in as admin to access this section.");
-    return;
+  const sections = ["home", "about", "products", "orders", "transactions"];
+  sections.forEach(sec => {
+    const el = document.getElementById(`section-${sec}`);
+    if (el) el.classList.add("hidden");
+  });
+
+  const activeSecEl = document.getElementById(`section-${sectionName}`);
+  if (activeSecEl) {
+    activeSecEl.classList.remove("hidden");
   }
 
-  ["home", "about", "products", "orders", "transactions"].forEach(sec => {
-    document.getElementById(`section-${sec}`)?.classList.add("hidden");
-  });
-  document.getElementById(`section-${sectionName}`)?.classList.remove("hidden");
-
   document.querySelectorAll(".nav-link-item").forEach(link => {
-    link.classList.toggle("active", link.getAttribute("data-nav-target") === sectionName);
+    if (link.getAttribute("data-nav-target") === sectionName) {
+      link.classList.add("active");
+    } else {
+      link.classList.remove("active");
+    }
   });
 
-  if (sectionName === "products") renderProductsCatalog();
-  else if (sectionName === "orders") renderOrdersDashboard();
-  else if (sectionName === "transactions") renderTransactionHistory();
+  if (sectionName === "products") {
+    renderProductsCatalog();
+  } else if (sectionName === "orders") {
+    renderOrdersDashboard();
+  } else if (sectionName === "transactions") {
+    renderTransactionHistory();
+  }
 
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
 
 // ==========================================================================
-// 4. BILINGUAL PRODUCTS CATALOG
+// 4. BILINGUAL PRODUCTS CATALOG RENDERING & FILTERING
 // ==========================================================================
 function renderProductsCatalog() {
   const grid = document.getElementById("productsGrid");
@@ -491,32 +512,45 @@ function renderProductsCatalog() {
 
   const totalCount = store.products.length;
   const outCount = store.products.filter(p => p.stock <= 0).length;
+
   if (allCountBadge) allCountBadge.textContent = totalCount;
   if (outCountBadge) outCountBadge.textContent = outCount;
 
+  // Filter products
   let filtered = store.products.filter(item => {
-    if (store.currentCategory === "out-of-stock") return item.stock <= 0;
+    if (store.currentCategory === "out-of-stock") {
+      return item.stock <= 0;
+    }
     const matchCat = store.currentCategory === "all" || item.category === store.currentCategory;
-    const matchSearch = store.searchQuery === "" ||
+    const matchSearch = store.searchQuery === "" || 
       item.nameEn.toLowerCase().includes(store.searchQuery.toLowerCase()) ||
-      item.nameTa.toLowerCase().includes(store.searchQuery.toLowerCase());
+      item.nameTa.toLowerCase().includes(store.searchQuery.toLowerCase()) ||
+      item.category.toLowerCase().includes(store.searchQuery.toLowerCase());
     return matchCat && matchSearch;
   });
 
-  if (store.sortOption === "price-low") filtered.sort((a, b) => a.price - b.price);
-  else if (store.sortOption === "price-high") filtered.sort((a, b) => b.price - a.price);
-  else if (store.sortOption === "name-az") filtered.sort((a, b) => a.nameEn.localeCompare(b.nameEn));
+  // Sort products
+  if (store.sortOption === "price-low") {
+    filtered.sort((a, b) => a.price - b.price);
+  } else if (store.sortOption === "price-high") {
+    filtered.sort((a, b) => b.price - a.price);
+  } else if (store.sortOption === "name-az") {
+    filtered.sort((a, b) => a.nameEn.localeCompare(b.nameEn));
+  }
 
-  if (countLabel) countLabel.textContent = `Showing ${filtered.length} of ${store.products.length} grocery items`;
+  if (countLabel) {
+    countLabel.textContent = `Showing ${filtered.length} of ${store.products.length} grocery items`;
+  }
 
   if (filtered.length === 0) {
     grid.innerHTML = `
-      <div style="grid-column:1/-1; text-align:center; padding:4rem 1rem; color:var(--text-muted);">
-        <div style="font-size:3rem; margin-bottom:0.5rem;">🔍</div>
-        <h3 style="color:var(--text-main); font-weight:800;">No items found</h3>
+      <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 1rem; color: var(--text-muted);">
+        <div style="font-size: 3rem; margin-bottom: 0.5rem;">🔍</div>
+        <h3 style="color: var(--text-main); font-weight: 800;">No items found</h3>
         <p>Try searching for salt, sugar, dal, masala, soap, or shampoo</p>
-        <button class="btn-hero-primary" style="margin-top:1rem;" onclick="resetProductFilters()">View All Products</button>
-      </div>`;
+        <button class="btn-hero-primary" style="margin-top: 1rem;" onclick="resetProductFilters()">View All Products</button>
+      </div>
+    `;
     return;
   }
 
@@ -524,28 +558,32 @@ function renderProductsCatalog() {
     const isOut = product.stock <= 0;
     const cartQty = store.cart[product.id] || 0;
     const catLabel = getCategoryLabel(product.category);
-    const showManagerTools = store.isAdmin() && store.isManagerMode;
 
     return `
       <div class="product-card ${isOut ? 'is-out-of-stock' : ''}">
         <span class="product-badge-cat">${catLabel}</span>
+        
         <div class="product-img-box">
           <div class="product-icon-art">${product.icon}</div>
         </div>
+
         <div class="product-info-wrap">
           <div class="product-unit">${product.unit}</div>
           <h4 class="product-name-en">${product.nameEn}</h4>
           <div class="product-name-ta">${product.nameTa}</div>
+          
           <div class="product-stock-tag ${isOut ? 'out' : ''}">
-            <span class="product-stock-dot"></span>
+            <span class="product-stock-dot"></span> 
             ${isOut ? '❌ Out of Stock' : `In Stock (${product.stock})`}
           </div>
         </div>
+
         <div class="product-bottom-row">
           <div>
             <span class="product-price">₹${product.price}</span>
             <span class="product-mrp">MRP ₹${product.mrp}</span>
           </div>
+
           <div>
             ${isOut ? `
               <span class="btn-out-of-stock">Out of Stock</span>
@@ -566,24 +604,30 @@ function renderProductsCatalog() {
             `}
           </div>
         </div>
-        ${showManagerTools ? `
-          <div class="card-manager-tools">
-            <button class="btn-tool-pill edit" onclick="openEditProductModal(${product.id})">✏️ Edit</button>
-            <button class="btn-tool-pill stock-toggle ${isOut ? 'is-out' : ''}" onclick="handleToggleProductStock(${product.id})">
-              ${isOut ? '🟢 Restock' : '🔴 Out of Stock'}
-            </button>
-            <button class="btn-tool-pill delete" onclick="handleDeleteProduct(${product.id})">🗑️ Delete</button>
-          </div>
-        ` : ''}
-      </div>`;
+
+        <!-- Store Manager Bar (Edit / Delete / Toggle Stock) -->
+        <div class="card-manager-tools" ${store.isManagerMode ? '' : 'style="display:none;"'}>
+          <button class="btn-tool-pill edit" onclick="openEditProductModal(${product.id})">✏️ Edit</button>
+          <button class="btn-tool-pill stock-toggle ${isOut ? 'is-out' : ''}" onclick="handleToggleProductStock(${product.id})">
+            ${isOut ? '🟢 Restock' : '🔴 Out of Stock'}
+          </button>
+          <button class="btn-tool-pill delete" onclick="handleDeleteProduct(${product.id})">🗑️ Delete</button>
+        </div>
+      </div>
+    `;
   }).join("");
 }
 
 function getCategoryLabel(catKey) {
   const map = {
-    "dals": "Dal & Pulses", "spices": "Spices", "rice-flour": "Rice & Atta",
-    "oils-sugar-salt": "Oils & Sugar", "soaps": "Soaps", "shampoos": "Hair Care",
-    "snacks-beverages": "Tea & Snacks", "cleaning": "Cleaning"
+    "dals": "Dal & Pulses / பருப்பு",
+    "spices": "Spices / மசாலா",
+    "rice-flour": "Rice & Atta / அரிசி மாவு",
+    "oils-sugar-salt": "Oils & Sugar / எண்ணெய்",
+    "soaps": "Soaps / சோப்",
+    "shampoos": "Hair Care / ஷாம்பு",
+    "snacks-beverages": "Snacks & Tea / டீ காபி",
+    "cleaning": "Cleaning / சுத்தம்"
   };
   return map[catKey] || catKey;
 }
@@ -591,7 +635,11 @@ function getCategoryLabel(catKey) {
 window.filterCategory = function(category) {
   store.currentCategory = category;
   document.querySelectorAll(".filter-chip").forEach(chip => {
-    chip.classList.toggle("active", chip.getAttribute("data-category") === category);
+    if (chip.getAttribute("data-category") === category) {
+      chip.classList.add("active");
+    } else {
+      chip.classList.remove("active");
+    }
   });
   renderProductsCatalog();
 };
@@ -604,98 +652,89 @@ window.resetProductFilters = function() {
   filterCategory("all");
 };
 
-// Admin-only: Toggle Manager Mode
 window.toggleStoreManagerMode = function() {
-  if (!store.isAdmin()) return;
   store.isManagerMode = !store.isManagerMode;
   const btn = document.getElementById("toggleManagerModeBtn");
   if (btn) {
     btn.classList.toggle("active", store.isManagerMode);
-    btn.innerHTML = store.isManagerMode ? "<span>✅ Manager Mode ON</span>" : "<span>⚙️ Manage Stock</span>";
+    btn.innerHTML = store.isManagerMode ? "<span>✅ Manager Mode Active</span>" : "<span>⚙️ Manage Stock</span>";
   }
   renderProductsCatalog();
-  showToast(store.isManagerMode ? "Edit/Delete controls are now visible on each product." : "Manager Mode exited.");
+  showToast(store.isManagerMode ? "Manager Mode: Edit, Delete & Stock controls enabled!" : "Manager Mode exited.");
 };
 
 // ==========================================================================
-// 5. ADMIN: PRODUCT CRUD
+// 5. PRODUCT CRUD MODAL (ADD & EDIT)
 // ==========================================================================
 window.openAddProductModal = function() {
-  if (!store.isAdmin()) return;
-  document.getElementById("addProductForm")?.reset();
-  const emojiInput = document.getElementById("selectedNewEmoji");
-  if (emojiInput) emojiInput.value = "🌾";
-  document.getElementById("addProductModal")?.classList.add("open");
+  document.getElementById("addProductForm").reset();
+  document.getElementById("selectedNewEmoji").value = "🌾";
+  selectNewProdEmoji('🌾');
+  document.getElementById("addProductModal").classList.add("open");
 };
 
 window.closeAddProductModal = function() {
-  document.getElementById("addProductModal")?.classList.remove("open");
+  document.getElementById("addProductModal").classList.remove("open");
 };
 
 window.selectNewProdEmoji = function(emoji, btnEl) {
-  const emojiInput = document.getElementById("selectedNewEmoji");
-  if (emojiInput) emojiInput.value = emoji;
+  document.getElementById("selectedNewEmoji").value = emoji;
   document.querySelectorAll(".emoji-option-btn").forEach(b => b.classList.remove("active"));
   if (btnEl) btnEl.classList.add("active");
 };
 
 window.handleSaveNewProduct = function(event) {
   event.preventDefault();
-  if (!store.isAdmin()) return;
-  const nameEn = document.getElementById("newProdName")?.value.trim() || "";
-  const nameTa = document.getElementById("newProdNameTa")?.value.trim() || nameEn;
-  const category = document.getElementById("newProdCategory")?.value || "dals";
-  const unit = document.getElementById("newProdUnit")?.value.trim() || "1 kg";
-  const price = parseFloat(document.getElementById("newProdPrice")?.value) || 0;
-  const mrp = parseFloat(document.getElementById("newProdMrp")?.value) || price;
-  const stock = parseInt(document.getElementById("newProdStock")?.value) || 0;
-  const emoji = document.getElementById("selectedNewEmoji")?.value || "🌾";
-  const isOut = document.querySelector('input[name="newProdStatus"]:checked')?.value === "out-of-stock";
+  const nameEn = document.getElementById("newProdName").value.trim();
+  const nameTa = document.getElementById("newProdNameTa") ? document.getElementById("newProdNameTa").value.trim() : "";
+  const category = document.getElementById("newProdCategory").value;
+  const unit = document.getElementById("newProdUnit").value.trim();
+  const price = parseFloat(document.getElementById("newProdPrice").value);
+  const mrp = parseFloat(document.getElementById("newProdMrp").value) || price;
+  const stock = parseInt(document.getElementById("newProdStock").value) || 0;
+  const emoji = document.getElementById("selectedNewEmoji").value || "🌾";
+  const status = document.querySelector('input[name="newProdStatus"]:checked')?.value;
 
-  store.addProduct({ nameEn, nameTa, category, unit, price, mrp, stock: isOut ? 0 : stock, icon: emoji, rating: 5.0 });
+  const finalStock = status === "out-of-stock" ? 0 : stock;
+
+  const newProd = {
+    nameEn: nameEn,
+    nameTa: nameTa || nameEn,
+    category: category,
+    unit: unit,
+    price: price,
+    mrp: mrp,
+    stock: finalStock,
+    icon: emoji,
+    rating: 5.0
+  };
+
+  store.addProduct(newProd);
   closeAddProductModal();
   renderProductsCatalog();
   showToast(`"${nameEn}" added to store!`);
 };
 
 window.handleToggleProductStock = function(productId) {
-  if (!store.isAdmin()) return;
   store.toggleProductStock(productId);
   renderProductsCatalog();
-  showToast("Stock status updated!");
+  showToast("Product stock status updated!");
 };
 
 window.handleDeleteProduct = function(productId) {
-  if (!store.isAdmin()) return;
   const prod = store.products.find(p => p.id === productId);
   if (!prod) return;
-  if (confirm(`Delete "${prod.nameEn}" from your store?`)) {
+
+  if (confirm(`Are you sure you want to delete "${prod.nameEn}" from your store?`)) {
     store.deleteProduct(productId);
     renderProductsCatalog();
     updateCartBadge();
-    showToast(`"${prod.nameEn}" deleted.`);
-  }
-};
-
-window.openEditProductModal = function(productId) {
-  if (!store.isAdmin()) return;
-  const prod = store.products.find(p => p.id === productId);
-  if (!prod) return;
-  const newPrice = prompt(`Edit selling price for "${prod.nameEn}" (current: ₹${prod.price}):`, prod.price);
-  if (newPrice !== null && !isNaN(parseFloat(newPrice))) {
-    prod.price = parseFloat(newPrice);
-    const newStock = prompt(`Edit stock quantity (current: ${prod.stock}):`, prod.stock);
-    if (newStock !== null && !isNaN(parseInt(newStock))) {
-      prod.stock = parseInt(newStock);
-    }
-    store.saveProducts();
-    renderProductsCatalog();
-    showToast(`"${prod.nameEn}" updated!`);
+    showToast(`"${prod.nameEn}" deleted from store.`);
   }
 };
 
 // ==========================================================================
-// 6. ADMIN: STORE CONTACT DETAILS
+// 6. EDIT STORE & CONTACT DETAILS
 // ==========================================================================
 function updateStoreContactDisplay() {
   const info = store.storeInfo;
@@ -708,49 +747,41 @@ function updateStoreContactDisplay() {
 }
 
 window.openEditContactModal = function() {
-  if (!store.isAdmin()) return;
   const info = store.storeInfo;
-  const propEl = document.getElementById("editStoreProprietor");
-  const hoursEl = document.getElementById("editStoreHours");
-  const addrEl = document.getElementById("editStoreAddress");
-  const phoneEl = document.getElementById("editStorePhone");
-  const waEl = document.getElementById("editStoreWhatsApp");
-  const emailEl = document.getElementById("editStoreEmail");
+  document.getElementById("editStoreProprietor").value = info.proprietor;
+  document.getElementById("editStoreHours").value = info.hours;
+  document.getElementById("editStoreAddress").value = info.address;
+  document.getElementById("editStorePhone").value = info.phone;
+  document.getElementById("editStoreWhatsApp").value = info.whatsapp;
+  document.getElementById("editStoreEmail").value = info.email;
 
-  if (propEl) propEl.value = info.proprietor;
-  if (hoursEl) hoursEl.value = info.hours;
-  if (addrEl) addrEl.value = info.address;
-  if (phoneEl) phoneEl.value = info.phone;
-  if (waEl) waEl.value = info.whatsapp;
-  if (emailEl) emailEl.value = info.email;
-
-  document.getElementById("editContactModal")?.classList.add("open");
+  document.getElementById("editContactModal").classList.add("open");
 };
 
 window.closeEditContactModal = function() {
-  document.getElementById("editContactModal")?.classList.remove("open");
+  document.getElementById("editContactModal").classList.remove("open");
 };
 
 window.handleSaveStoreDetails = function(event) {
   event.preventDefault();
-  if (!store.isAdmin()) return;
   store.storeInfo = {
     name: "Rohith Groceries",
-    proprietor: document.getElementById("editStoreProprietor")?.value.trim() || store.storeInfo.proprietor,
-    hours: document.getElementById("editStoreHours")?.value.trim() || store.storeInfo.hours,
-    address: document.getElementById("editStoreAddress")?.value.trim() || store.storeInfo.address,
-    phone: document.getElementById("editStorePhone")?.value.trim() || store.storeInfo.phone,
-    whatsapp: document.getElementById("editStoreWhatsApp")?.value.trim() || store.storeInfo.whatsapp,
-    email: document.getElementById("editStoreEmail")?.value.trim() || store.storeInfo.email
+    proprietor: document.getElementById("editStoreProprietor").value.trim(),
+    hours: document.getElementById("editStoreHours").value.trim(),
+    address: document.getElementById("editStoreAddress").value.trim(),
+    phone: document.getElementById("editStorePhone").value.trim(),
+    whatsapp: document.getElementById("editStoreWhatsApp").value.trim(),
+    email: document.getElementById("editStoreEmail").value.trim()
   };
+
   store.saveStoreInfo();
   updateStoreContactDisplay();
   closeEditContactModal();
-  showToast("Store details saved!");
+  showToast("Store details saved successfully!");
 };
 
 // ==========================================================================
-// 7. CART & CHECKOUT FLOW
+// 7. CART & CHECKOUT WITH DELIVERY DATE SELECTION
 // ==========================================================================
 window.handleAddToCart = function(productId) {
   store.addToCart(productId, 1);
@@ -769,17 +800,20 @@ window.handleStepQty = function(productId, delta) {
 function updateCartBadge() {
   const count = store.getCartCount();
   document.querySelectorAll(".cart-count-display").forEach(b => b.textContent = count);
-  const badge = document.getElementById("orderPlacedNavBadge");
-  if (badge) badge.textContent = store.orders.length;
+
+  const ordersCountBadge = document.getElementById("orderPlacedNavBadge");
+  if (ordersCountBadge) {
+    ordersCountBadge.textContent = store.orders.length;
+  }
 }
 
 function openCartDrawer() {
   renderCartDrawer();
-  document.getElementById("cartDrawerBackdrop")?.classList.add("open");
+  document.getElementById("cartDrawerBackdrop").classList.add("open");
 }
 
 function closeCartDrawer() {
-  document.getElementById("cartDrawerBackdrop")?.classList.remove("open");
+  document.getElementById("cartDrawerBackdrop").classList.remove("open");
 }
 
 function renderCartDrawer() {
@@ -797,7 +831,8 @@ function renderCartDrawer() {
         <div style="font-size:3.5rem;">🛒</div>
         <p style="font-weight:700; font-size:1rem;">Your grocery basket is empty</p>
         <button class="btn-hero-primary" onclick="closeCartDrawer(); switchTab('products');">Explore Products</button>
-      </div>`;
+      </div>
+    `;
     if (subtotalEl) subtotalEl.textContent = "₹0";
     if (deliveryEl) deliveryEl.textContent = "₹0";
     if (totalEl) totalEl.textContent = "₹0";
@@ -810,61 +845,73 @@ function renderCartDrawer() {
   body.innerHTML = entries.map(([pId, qty]) => {
     const prod = store.products.find(p => p.id === parseInt(pId));
     if (!prod) return "";
+    const itemTotal = prod.price * qty;
+
     return `
       <div class="cart-item-row">
-        <div style="font-size:1.5rem; background:var(--brand-primary-subtle); padding:0.35rem 0.5rem; border-radius:8px;">${prod.icon}</div>
+        <div style="font-size: 1.5rem; background: var(--brand-primary-subtle); padding: 0.35rem 0.5rem; border-radius: 8px;">
+          ${prod.icon}
+        </div>
         <div style="flex:1;">
           <div style="font-size:0.875rem; font-weight:800;">${prod.nameEn}</div>
           <div style="font-size:0.75rem; color:var(--brand-primary-dark); font-family:var(--font-tamil);">${prod.nameTa}</div>
           <div style="font-size:0.75rem; color:var(--text-muted);">${prod.unit} • ₹${prod.price} each</div>
-          <div style="font-size:0.9rem; font-weight:900; color:var(--brand-primary-dark); margin-top:0.2rem;">₹${prod.price * qty}</div>
+          <div style="font-size:0.9rem; font-weight:900; color:var(--brand-primary-dark); margin-top:0.2rem;">₹${itemTotal}</div>
         </div>
         <div class="cart-stepper-btn">
           <button class="btn-step" onclick="handleStepQty(${prod.id}, -1)">−</button>
           <span class="step-qty">${qty}</span>
           <button class="btn-step" onclick="handleStepQty(${prod.id}, 1)">+</button>
         </div>
-      </div>`;
+      </div>
+    `;
   }).join("");
 
   const subtotal = store.getCartSubtotal();
   const delivery = subtotal >= 300 ? 0 : 30;
   const total = subtotal + delivery;
+
   if (subtotalEl) subtotalEl.textContent = `₹${subtotal}`;
   if (deliveryEl) deliveryEl.textContent = delivery === 0 ? "FREE (Orders ₹300+)" : `₹${delivery}`;
   if (totalEl) totalEl.textContent = `₹${total}`;
 }
 
+// Checkout Modal & Date Picker
 function openCheckoutModal() {
   closeCartDrawer();
+  const modal = document.getElementById("checkoutModal");
+  const itemsMini = document.getElementById("checkoutItemsMini");
+  const checkoutTotalEl = document.getElementById("checkoutTotalDisplay");
+
   const entries = Object.entries(store.cart);
   if (entries.length === 0) {
     showToast("Please add items to your cart first!");
     return;
   }
 
-  const itemsMini = document.getElementById("checkoutItemsMini");
   if (itemsMini) {
     itemsMini.innerHTML = entries.map(([pId, qty]) => {
       const prod = store.products.find(p => p.id === parseInt(pId));
-      if (!prod) return "";
-      return `<div style="display:flex; justify-content:space-between; padding:0.35rem 0; border-bottom:1px dashed #cbd5e1; font-size:0.85rem;">
-        <span>${prod.icon} ${prod.nameEn} (${prod.nameTa}) × ${qty}</span>
-        <strong>₹${prod.price * qty}</strong>
-      </div>`;
+      return `
+        <div style="display:flex; justify-content:space-between; padding:0.35rem 0; border-bottom:1px dashed #cbd5e1; font-size:0.85rem;">
+          <span>${prod.icon} ${prod.nameEn} (${prod.nameTa}) × ${qty}</span>
+          <strong>₹${prod.price * qty}</strong>
+        </div>
+      `;
     }).join("");
   }
 
   const subtotal = store.getCartSubtotal();
   const delivery = subtotal >= 300 ? 0 : 30;
-  const el = document.getElementById("checkoutTotalDisplay");
-  if (el) el.textContent = `₹${subtotal + delivery}`;
+  const total = subtotal + delivery;
 
-  document.getElementById("checkoutModal")?.classList.add("open");
+  if (checkoutTotalEl) checkoutTotalEl.textContent = `₹${total}`;
+
+  modal.classList.add("open");
 }
 
 function closeCheckoutModal() {
-  document.getElementById("checkoutModal")?.classList.remove("open");
+  document.getElementById("checkoutModal").classList.remove("open");
 }
 
 function setupCheckoutForm() {
@@ -873,186 +920,255 @@ function setupCheckoutForm() {
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();
-    const name = document.getElementById("custNameInput")?.value.trim();
-    const phone = document.getElementById("custPhoneInput")?.value.trim();
-    const address = document.getElementById("custAddressInput")?.value.trim();
-    const landmark = document.getElementById("custLandmarkInput")?.value.trim() || "";
-    const dateSlot = document.getElementById("custDeliveryDateSlot")?.value || "Today (Within 30-45 Mins Express)";
+    const name = document.getElementById("custNameInput").value.trim();
+    const phone = document.getElementById("custPhoneInput").value.trim();
+    const address = document.getElementById("custAddressInput").value.trim();
+    const landmark = document.getElementById("custLandmarkInput").value.trim();
+    const dateSlot = document.getElementById("custDeliveryDateSlot").value;
+    const payMode = document.querySelector('input[name="payMethod"]:checked')?.value || "UPI (GPay / PhonePe)";
 
     if (!name || !phone || !address) {
-      showToast("Please fill your name, phone, and address!");
+      showToast("Please fill all required customer fields!");
       return;
     }
+
     if (phone.length < 10) {
       showToast("Please enter a valid 10-digit phone number!");
       return;
     }
 
-    // Build order (NOT saved yet — saved only when WhatsApp is clicked)
-    const order = store.buildPendingOrder({ name, phone, address, landmark }, dateSlot);
+    const customerData = {
+      name: name,
+      phone: phone,
+      address: address,
+      landmark: landmark
+    };
+
+    const result = store.placeOrder(customerData, payMode, dateSlot);
     closeCheckoutModal();
-    showWhatsAppConfirmModal(order);
+    updateCartBadge();
+    renderProductsCatalog();
+
+    showOrderSuccessMessageModal(result.order);
   });
 }
 
-// ==========================================================================
-// 8. WHATSAPP CONFIRMATION SCREEN & DISPATCH
-// ==========================================================================
-function showWhatsAppConfirmModal(order) {
+function showOrderSuccessMessageModal(order) {
   const modal = document.getElementById("orderConfirmationModal");
   const detailsBox = document.getElementById("orderConfirmationMsgDetails");
 
-  // Clean the number: remove spaces, dashes, +91 or 91 prefix, leading 0
-  const rawNumber = String(store.storeInfo.whatsapp || "8940826965");
-  const shopNumber = rawNumber.replace(/[\s\-\+]/g, '').replace(/^91/, '').replace(/^0/, '');
-
-  // Pre-filled WhatsApp message to shop owner
-  const waMessage =
-    `*New Order — Rohith Groceries* 🛒\n\n` +
-    `📦 *Order ID:* ${order.orderId}\n` +
-    `👤 *Customer:* ${order.customer.name}\n` +
-    `📞 *Phone:* +91 ${order.customer.phone}\n` +
-    `📍 *Address:* ${order.customer.address}` +
-    (order.customer.landmark ? ` (Near ${order.customer.landmark})` : "") + `\n` +
-    `📅 *Delivery:* ${order.deliveryDate}\n\n` +
-    `*Items Ordered:*\n${order.items.map(i => `• ${i.nameEn} (${i.nameTa}) × ${i.quantity} — ₹${i.price * i.quantity}`).join("\n")}\n\n` +
-    `💵 *Total: ₹${order.totalAmount}* (Cash on Delivery)\n\n` +
-    `_Please confirm this order and prepare for delivery._`;
-
-  const waUrl = `https://wa.me/91${shopNumber}?text=${encodeURIComponent(waMessage)}`;
+  const itemsText = order.items.map(i => `${i.nameEn} (${i.nameTa}) x${i.quantity}`).join(", ");
+  const waUrl = `https://wa.me/91${order.customer.phone}?text=${encodeURIComponent(
+    `*Rohith Groceries Order #${order.orderId}*\n\n` +
+    `👤 Customer: ${order.customer.name}\n` +
+    `📦 Products: ${itemsText}\n` +
+    `💰 Total: Rs. ${order.totalAmount}\n` +
+    `📅 Delivery: ${order.deliveryDate}\n` +
+    `📍 Address: ${order.customer.address}\n` +
+    `🔑 Delivery OTP: ${order.otp}\n\n` +
+    `Thank you for shopping with Rohith Groceries!`
+  )}`;
 
   if (detailsBox) {
     detailsBox.innerHTML = `
-      <div style="text-align:center; margin-bottom:1.25rem;">
-        <div style="font-size:3rem;">🛒</div>
-        <h3 style="font-size:1.4rem; font-weight:900; color:#15803d; margin-bottom:0.25rem;">Order Ready — Send to Shop!</h3>
-        <p style="color:var(--text-muted); font-size:0.85rem;">Your order is prepared. Click the button below to send it to Rohith Groceries via WhatsApp. <strong>The order is confirmed only after you send the message.</strong></p>
+      <div style="text-align:center; margin-bottom: 1.25rem;">
+        <div style="font-size: 3.5rem;">🎉</div>
+        <h3 style="font-size: 1.5rem; font-weight: 900; color: #166534;">Order #${order.orderId} Placed!</h3>
+        <p style="color: var(--text-muted); font-size: 0.85rem;">Saved to Order Placed & Transaction History</p>
       </div>
 
-      <!-- Order Summary Box -->
-      <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:12px; padding:1.25rem; margin-bottom:1.25rem;">
-        <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.5rem; font-weight:800; text-transform:uppercase;">Order Summary</div>
-        ${order.items.map(i => `
-          <div style="display:flex; justify-content:space-between; font-size:0.85rem; padding:0.3rem 0; border-bottom:1px dashed #bbf7d0;">
-            <span>${i.nameEn} (${i.nameTa}) × ${i.quantity}</span>
-            <strong>₹${i.price * i.quantity}</strong>
-          </div>`).join("")}
-        <div style="display:flex; justify-content:space-between; font-size:1.1rem; font-weight:900; color:#15803d; padding-top:0.65rem; margin-top:0.35rem;">
-          <span>Total (COD)</span>
-          <span>₹${order.totalAmount}</span>
+      <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:12px; padding:1.25rem; display:flex; flex-direction:column; gap:0.75rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong style="color:#166534; font-size:0.85rem;">📅 Scheduled Delivery:</strong>
+          <span style="background:#dbeafe; color:#1e40af; font-weight:800; font-size:0.8rem; padding:0.25rem 0.6rem; border-radius:6px;">${order.deliveryDate}</span>
         </div>
-        <div style="font-size:0.8rem; color:#1e40af; margin-top:0.35rem; font-weight:700;">
-          📅 Delivery: ${order.deliveryDate}
+
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong style="color:#166534; font-size:0.85rem;">🔑 Customer Delivery OTP:</strong>
+          <span style="background:#fef3c7; color:#92400e; font-weight:900; font-size:1.1rem; padding:0.2rem 0.6rem; border-radius:6px; font-family:monospace;">${order.otp}</span>
+        </div>
+
+        <div style="background:white; border:1px solid #bbf7d0; border-radius:8px; padding:0.85rem; font-size:0.8rem; font-family:monospace; color:#14532d; line-height:1.5; white-space:pre-wrap;">
+📱 Message Dispatched to Customer (+91 ${order.customer.phone}):
+"Dear ${order.customer.name}, your Rohith Groceries order #${order.orderId} for ₹${order.totalAmount} is confirmed!
+📅 Delivery: ${order.deliveryDate}
+🔑 Delivery OTP: ${order.otp}
+📦 Products: ${itemsText}"
+        </div>
+
+        <div style="display:flex; justify-content:flex-end;">
+          <a href="${waUrl}" target="_blank" class="btn-fill-demo" style="background:#25D366; text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem; padding:0.5rem 1rem;">
+            <span>💬 Send via WhatsApp</span>
+          </a>
         </div>
       </div>
-
-      <!-- Send WhatsApp Button -->
-      <a href="${waUrl}" target="_blank"
-         onclick="handleWhatsAppSent()"
-         id="sendWhatsAppBtn"
-         style="display:flex; align-items:center; justify-content:center; gap:0.65rem; width:100%; padding:1rem; background:#25D366; color:white; font-size:1.05rem; font-weight:800; border-radius:12px; text-decoration:none; margin-bottom:0.75rem; box-shadow:0 4px 12px rgba(37,211,102,0.35);">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-        </svg>
-        Send Order to Shop via WhatsApp
-      </a>
-
-      <p style="text-align:center; font-size:0.775rem; color:var(--text-muted);">
-        📱 Sending to shop WhatsApp: +91 ${shopNumber} • Your order will be confirmed once the message is sent.
-      </p>
     `;
   }
 
-  modal?.classList.add("open");
+  modal.classList.add("open");
 }
 
-// Called when customer clicks the WhatsApp button — save order now
-window.handleWhatsAppSent = function() {
-  const savedOrder = store.confirmAndSavePendingOrder();
-  if (savedOrder) {
-    updateCartBadge();
-    renderProductsCatalog();
-    showToast("Order sent to shop! Thank you 🎉");
-  }
-
-  // After a short delay, close modal and return to products page
-  setTimeout(() => {
-    closeOrderSuccessModal();
-    switchTab("products");
-  }, 1500);
-};
-
 window.closeOrderSuccessModal = function() {
-  document.getElementById("orderConfirmationModal")?.classList.remove("open");
-  // If they close without sending WhatsApp — discard pending order
-  store.pendingOrder = null;
+  document.getElementById("orderConfirmationModal").classList.remove("open");
 };
 
 // ==========================================================================
-// 9. ADMIN: "ORDER PLACED" DASHBOARD
+// 8. "ORDER PLACED" DASHBOARD & AUTOMATIC TIMER ENGINE
 // ==========================================================================
 function renderOrdersDashboard() {
   const container = document.getElementById("ordersListGrid");
-  const badge = document.getElementById("orderPlacedNavBadge");
+  const badgeNav = document.getElementById("orderPlacedNavBadge");
   if (!container) return;
-  if (badge) badge.textContent = store.orders.length;
 
-  if (store.orders.length === 0) {
+  if (badgeNav) badgeNav.textContent = store.orders.length;
+
+  let filtered = store.orders;
+  if (store.orderFilterStatus !== "all") {
+    filtered = filtered.filter(o => o.orderStatus.toLowerCase() === store.orderFilterStatus.toLowerCase());
+  }
+
+  if (filtered.length === 0) {
     container.innerHTML = `
-      <div style="background:white; border:1px solid var(--border-light); border-radius:var(--radius-lg); padding:4rem 1rem; text-align:center; color:var(--text-muted);">
-        <div style="font-size:3rem; margin-bottom:0.5rem;">📦</div>
-        <h3 style="color:var(--text-main); font-weight:800;">No orders yet</h3>
-        <p>Customer orders sent via WhatsApp will appear here.</p>
-      </div>`;
+      <div style="background: white; border: 1px solid var(--border-light); border-radius: var(--radius-lg); padding: 4rem 1rem; text-align: center; color: var(--text-muted);">
+        <div style="font-size: 3rem; margin-bottom: 0.5rem;">📦</div>
+        <h3 style="color: var(--text-main); font-weight: 800;">No customer orders found</h3>
+        <p>Placed orders will automatically appear here with full customer details.</p>
+        <button class="btn-hero-primary" style="margin-top: 1rem;" onclick="switchTab('products')">Place an Order</button>
+      </div>
+    `;
     return;
   }
 
-  container.innerHTML = store.orders.map(order => `
-    <div class="order-card-record">
-      <div class="order-card-top">
-        <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
-          <span style="font-weight:900; font-size:1.1rem; color:var(--brand-primary-dark);">Order #${order.orderId}</span>
-          <span class="order-delivery-date-pill">📅 ${order.deliveryDate || 'Standard Delivery'}</span>
-        </div>
-        <div style="display:flex; align-items:center; gap:0.5rem;">
-          <span style="font-size:0.8rem; color:var(--text-muted);">${order.timestamp}</span>
-          <button class="btn-order-action danger" onclick="handleDeleteOrder('${order.orderId}')" title="Delete Order">🗑️ Delete</button>
-        </div>
-      </div>
+  container.innerHTML = filtered.map(order => {
+    let statusClass = "status-placed";
+    if (order.orderStatus === "Packed") statusClass = "status-packed";
+    if (order.orderStatus === "Out for Delivery") statusClass = "status-out";
+    if (order.orderStatus === "Delivered") statusClass = "status-delivered";
+    if (order.orderStatus === "Cancelled") statusClass = "status-cancelled";
 
-      <div class="order-details-columns">
-        <div>
-          <h5 style="font-size:0.75rem; font-weight:800; text-transform:uppercase; color:var(--text-muted); margin-bottom:0.5rem;">Customer Details</h5>
-          <div class="customer-info-row"><strong>${order.customer.name}</strong></div>
-          <div class="customer-info-row">📞 +91 ${order.customer.phone}</div>
-          <div class="customer-info-row">📍 ${order.customer.address}${order.customer.landmark ? ` (Near ${order.customer.landmark})` : ''}</div>
-        </div>
-        <div>
-          <h5 style="font-size:0.75rem; font-weight:800; text-transform:uppercase; color:var(--text-muted); margin-bottom:0.5rem;">Ordered Products</h5>
-          ${order.items.map(item => `
-            <div class="order-product-line">
-              <span><strong>${item.quantity}×</strong> ${item.nameEn} <small style="color:var(--brand-primary-dark); font-family:var(--font-tamil);">(${item.nameTa})</small></span>
-              <strong>₹${item.price * item.quantity}</strong>
-            </div>`).join("")}
-        </div>
-      </div>
+    return `
+      <div class="order-card-record">
+        <div class="order-card-top">
+          <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+            <span style="font-weight:900; font-size:1.1rem; color:var(--brand-primary-dark);">Order #${order.orderId}</span>
+            <span class="order-delivery-date-pill">📅 ${order.deliveryDate || 'Standard Delivery'}</span>
+            <span class="order-otp-box">🔑 OTP: ${order.otp}</span>
+          </div>
 
-      <div class="order-card-bottom">
-        <div>
-          <span style="font-size:0.8rem; color:var(--text-muted);">Total: </span>
-          <span style="font-size:1.25rem; font-weight:900; color:var(--brand-primary-dark);">₹${order.totalAmount}</span>
-          <span style="font-size:0.775rem; color:var(--text-muted); margin-left:0.5rem;">• Cash on Delivery</span>
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <span class="order-status-badge ${statusClass}">● ${order.orderStatus}</span>
+            <button class="btn-order-action danger" onclick="handleDeleteOrder('${order.orderId}')" title="Delete Order">🗑️</button>
+          </div>
         </div>
-        <div class="order-actions-wrap">
-          <button class="btn-order-action" onclick="viewOrderInvoice('${order.orderId}')">📄 Invoice</button>
+
+        <div class="order-details-columns">
+          <!-- Customer Info -->
+          <div>
+            <h5 style="font-size:0.75rem; font-weight:800; text-transform:uppercase; color:var(--text-muted); margin-bottom:0.5rem;">Customer Delivery Contact</h5>
+            <div class="customer-info-row">
+              <strong>${order.customer.name}</strong>
+            </div>
+            <div class="customer-info-row">
+              <span>📞 +91 ${order.customer.phone}</span>
+            </div>
+            <div class="customer-info-row">
+              <span>📍 ${order.customer.address} ${order.customer.landmark ? `(Near ${order.customer.landmark})` : ''}</span>
+            </div>
+          </div>
+
+          <!-- Products list with Tamil names -->
+          <div>
+            <h5 style="font-size:0.75rem; font-weight:800; text-transform:uppercase; color:var(--text-muted); margin-bottom:0.5rem;">Ordered Products (${order.items.length} items)</h5>
+            ${order.items.map(item => `
+              <div class="order-product-line">
+                <span>
+                  <strong>${item.quantity}×</strong> ${item.nameEn} 
+                  <small style="color:var(--brand-primary-dark); font-family:var(--font-tamil);">(${item.nameTa})</small>
+                </span>
+                <strong>₹${item.price * item.quantity}</strong>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+
+        <div class="order-card-bottom">
+          <div>
+            <span style="font-size:0.8rem; color:var(--text-muted);">Total Bill: </span>
+            <span style="font-size:1.25rem; font-weight:900; color:var(--brand-primary-dark);">₹${order.totalAmount}</span>
+            <span style="font-size:0.775rem; color:var(--text-muted); margin-left:0.5rem;">• ${order.paymentMethod}</span>
+          </div>
+
+          <div class="order-actions-wrap">
+            <select class="btn-order-action" onchange="updateOrderStatus('${order.orderId}', this.value)">
+              <option value="Placed" ${order.orderStatus === "Placed" ? "selected" : ""}>Status: Placed</option>
+              <option value="Packed" ${order.orderStatus === "Packed" ? "selected" : ""}>Status: Packed</option>
+              <option value="Out for Delivery" ${order.orderStatus === "Out for Delivery" ? "selected" : ""}>Status: Out for Delivery</option>
+              <option value="Delivered" ${order.orderStatus === "Delivered" ? "selected" : ""}>Status: Delivered</option>
+              <option value="Cancelled" ${order.orderStatus === "Cancelled" ? "selected" : ""}>Status: Cancelled</option>
+            </select>
+
+            <button class="btn-order-action" onclick="verifyOrderOtpPrompt('${order.orderId}', '${order.otp}')">
+              🔑 Verify OTP
+            </button>
+
+            <button class="btn-order-action" onclick="viewOrderInvoice('${order.orderId}')">
+              📄 Invoice
+            </button>
+
+            <button class="btn-order-action primary" onclick="resendCustomerAlert('${order.orderId}')">
+              📱 Resend SMS
+            </button>
+          </div>
         </div>
       </div>
-    </div>`).join("");
+    `;
+  }).join("");
 }
 
+window.filterOrdersByStatus = function(status) {
+  store.orderFilterStatus = status;
+  document.querySelectorAll(".orders-chip").forEach(c => {
+    if (c.getAttribute("data-order-status") === status) {
+      c.classList.add("active");
+    } else {
+      c.classList.remove("active");
+    }
+  });
+  renderOrdersDashboard();
+};
+
+window.updateOrderStatus = function(orderId, newStatus) {
+  const order = store.orders.find(o => o.orderId === orderId);
+  if (order) {
+    order.orderStatus = newStatus;
+    if (newStatus === "Delivered") {
+      order.paymentStatus = "Paid";
+      const txn = store.transactions.find(t => t.orderId === orderId);
+      if (txn) txn.status = "Settled / Paid";
+    }
+    if (newStatus === "Cancelled") {
+      const txn = store.transactions.find(t => t.orderId === orderId);
+      if (txn) txn.status = "Cancelled";
+    }
+    store.saveOrdersAndTransactions();
+    renderOrdersDashboard();
+    renderTransactionHistory();
+    showToast(`Order #${orderId} status changed to ${newStatus}`);
+  }
+};
+
+window.verifyOrderOtpPrompt = function(orderId, expectedOtp) {
+  const userOtp = prompt(`Enter customer 4-digit Delivery OTP (Expected: ${expectedOtp}):`);
+  if (userOtp === expectedOtp) {
+    updateOrderStatus(orderId, "Delivered");
+    showToast(`OTP Verified! Order #${orderId} marked as Delivered 🟢`);
+  } else if (userOtp) {
+    alert("Incorrect OTP entered. Please verify with customer.");
+  }
+};
+
 window.handleDeleteOrder = function(orderId) {
-  if (!store.isAdmin()) return;
-  if (confirm(`Delete Order #${orderId}? This will also remove it from Transaction History.`)) {
+  if (confirm(`Delete Order #${orderId}? This will remove it from Order Placed and Transaction History.`)) {
     store.deleteOrder(orderId);
     renderOrdersDashboard();
     renderTransactionHistory();
@@ -1062,18 +1178,94 @@ window.handleDeleteOrder = function(orderId) {
 };
 
 window.handleClearPastOrders = function() {
-  if (!store.isAdmin()) return;
-  if (confirm("Clear ALL orders from history? This cannot be undone.")) {
-    store.clearAllOrders();
+  if (confirm("Clear all completed and cancelled orders from history? Active orders will remain.")) {
+    store.clearCompletedOrders();
     renderOrdersDashboard();
     renderTransactionHistory();
     updateCartBadge();
-    showToast("All orders cleared.");
+    showToast("Completed orders history cleared.");
+  }
+};
+
+window.resendCustomerAlert = function(orderId) {
+  const order = store.orders.find(o => o.orderId === orderId);
+  if (order) showOrderSuccessMessageModal(order);
+};
+
+// --- Automatic Progression Timer Engine ---
+function startAutoTimerEngine() {
+  setInterval(() => {
+    if (!store.autoTimerEnabled) return;
+
+    let hasChanges = false;
+    const now = Date.now();
+
+    store.orders.forEach(order => {
+      if (!order.placedTime || order.orderStatus === "Delivered" || order.orderStatus === "Cancelled") return;
+
+      const elapsedSec = (now - order.placedTime) / 1000;
+
+      // Progression Schedule:
+      // 0 - 60s: Placed
+      // 60s - 180s (1-3 min): Packed
+      // 180s - 360s (3-6 min): Out for Delivery
+      // > 360s (6 min): Delivered
+      if (elapsedSec > 360 && order.orderStatus !== "Delivered") {
+        order.orderStatus = "Delivered";
+        order.paymentStatus = "Paid";
+        const txn = store.transactions.find(t => t.orderId === order.orderId);
+        if (txn) txn.status = "Settled / Paid";
+        hasChanges = true;
+      } else if (elapsedSec > 180 && order.orderStatus === "Packed") {
+        order.orderStatus = "Out for Delivery";
+        hasChanges = true;
+      } else if (elapsedSec > 60 && order.orderStatus === "Placed") {
+        order.orderStatus = "Packed";
+        hasChanges = true;
+      }
+    });
+
+    if (hasChanges) {
+      store.saveOrdersAndTransactions();
+      renderOrdersDashboard();
+      renderTransactionHistory();
+    }
+  }, 10000);
+}
+
+window.toggleAutoTimerMode = function() {
+  store.autoTimerEnabled = !store.autoTimerEnabled;
+  localStorage.setItem("rg_auto_timer", JSON.stringify(store.autoTimerEnabled));
+  
+  const badge = document.getElementById("autoTimerStatusPill");
+  if (badge) {
+    badge.textContent = store.autoTimerEnabled ? "🟢 Auto Timer: ON" : "⚙️ Manual Mode";
+  }
+  showToast(store.autoTimerEnabled ? "Automatic Timer enabled (Orders auto-progress)" : "Switched to Manual Mode");
+};
+
+window.fastForwardOrderTimer = function() {
+  const activeOrder = store.orders.find(o => o.orderStatus !== "Delivered" && o.orderStatus !== "Cancelled");
+  if (activeOrder) {
+    if (activeOrder.orderStatus === "Placed") activeOrder.orderStatus = "Packed";
+    else if (activeOrder.orderStatus === "Packed") activeOrder.orderStatus = "Out for Delivery";
+    else if (activeOrder.orderStatus === "Out for Delivery") {
+      activeOrder.orderStatus = "Delivered";
+      activeOrder.paymentStatus = "Paid";
+      const txn = store.transactions.find(t => t.orderId === activeOrder.orderId);
+      if (txn) txn.status = "Settled / Paid";
+    }
+    store.saveOrdersAndTransactions();
+    renderOrdersDashboard();
+    renderTransactionHistory();
+    showToast(`⚡ Fast-forwarded #${activeOrder.orderId} to: ${activeOrder.orderStatus}`);
+  } else {
+    showToast("No active pending orders to fast-forward. Place a new order to test!");
   }
 };
 
 // ==========================================================================
-// 10. ADMIN: TRANSACTION HISTORY
+// 9. TRANSACTION HISTORY LEDGER
 // ==========================================================================
 function renderTransactionHistory() {
   const tableBody = document.getElementById("transactionLedgerBody");
@@ -1083,133 +1275,198 @@ function renderTransactionHistory() {
   const pendingOrdersEl = document.getElementById("statPendingCount");
   if (!tableBody) return;
 
-  const totalRev = store.transactions.reduce((sum, t) => sum + t.amount, 0);
-  const txnCount = store.transactions.length;
+  const totalRev = store.transactions.reduce((sum, t) => sum + (t.status !== "Cancelled" ? t.amount : 0), 0);
+  const txnCount = store.transactions.filter(t => t.status !== "Cancelled").length;
   const avgOrder = txnCount > 0 ? Math.round(totalRev / txnCount) : 0;
+  const pendingCount = store.orders.filter(o => o.orderStatus !== "Delivered" && o.orderStatus !== "Cancelled").length;
 
   if (totalRevEl) totalRevEl.textContent = `₹${totalRev.toLocaleString('en-IN')}`;
   if (totalTxnCountEl) totalTxnCountEl.textContent = txnCount;
   if (avgOrderEl) avgOrderEl.textContent = `₹${avgOrder}`;
-  if (pendingOrdersEl) pendingOrdersEl.textContent = store.orders.length;
+  if (pendingOrdersEl) pendingOrdersEl.textContent = pendingCount;
 
   if (store.transactions.length === 0) {
-    tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:3rem; color:var(--text-muted);">No transactions yet. Orders appear here after customers send them via WhatsApp.</td></tr>`;
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="7" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+          No transactions recorded yet.
+        </td>
+      </tr>
+    `;
     return;
   }
 
-  tableBody.innerHTML = store.transactions.map(txn => `
-    <tr>
-      <td><span style="font-family:monospace; font-weight:800; color:var(--brand-primary-dark);">${txn.txnId}</span></td>
-      <td><strong>#${txn.orderId}</strong></td>
-      <td>${txn.date}</td>
-      <td>
-        <div style="font-weight:800;">${txn.customerName}</div>
-        <div style="font-size:0.75rem; color:var(--text-muted);">+91 ${txn.phone}</div>
-      </td>
-      <td><strong>₹${txn.amount}</strong> (${txn.itemCount} items)</td>
-      <td><span class="pay-badge cod">Cash on Delivery</span></td>
-      <td><strong style="color:#f59e0b;">● Pending Delivery</strong></td>
-    </tr>`).join("");
+  tableBody.innerHTML = store.transactions.map(txn => {
+    let payClass = "upi";
+    if (txn.paymentMode.includes("Cash")) payClass = "cod";
+
+    return `
+      <tr>
+        <td><span style="font-family:monospace; font-weight:800; color:var(--brand-primary-dark);">${txn.txnId}</span></td>
+        <td><strong>#${txn.orderId}</strong></td>
+        <td>${txn.date}</td>
+        <td>
+          <div style="font-weight: 800;">${txn.customerName}</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">+91 ${txn.phone}</div>
+        </td>
+        <td><strong>₹${txn.amount}</strong> (${txn.itemCount} items)</td>
+        <td><span class="pay-badge ${payClass}">${txn.paymentMode}</span></td>
+        <td>
+          <strong style="color:${txn.status.includes('Paid') ? '#16a34a' : txn.status.includes('Cancelled') ? '#ef4444' : '#f59e0b'};">
+            ● ${txn.status}
+          </strong>
+        </td>
+      </tr>
+    `;
+  }).join("");
 }
 
 window.exportTransactionsCSV = function() {
   if (store.transactions.length === 0) {
-    showToast("No records to export!");
+    showToast("No transaction records to export!");
     return;
   }
-  let csv = "Transaction ID,Order ID,Date,Customer Name,Phone,Total Amount (INR),Payment Mode,Status\n";
+
+  let csv = "Transaction ID,Order ID,Date & Time,Customer Name,Phone Number,Total Amount (INR),Payment Mode,Status\n";
   store.transactions.forEach(t => {
     csv += `"${t.txnId}","${t.orderId}","${t.date}","${t.customerName}","${t.phone}","${t.amount}","${t.paymentMode}","${t.status}"\n`;
   });
+
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `rohith_groceries_ledger_${new Date().toISOString().slice(0, 10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  showToast("CSV downloaded!");
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `rohith_groceries_ledger_${new Date().toISOString().slice(0, 10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showToast("CSV Ledger Downloaded!");
 };
 
-// Invoice Modal
+// Invoice Viewer Modal
 window.viewOrderInvoice = function(orderId) {
   const order = store.orders.find(o => o.orderId === orderId);
   if (!order) return;
+
   const modal = document.getElementById("invoiceModal");
   const content = document.getElementById("invoiceModalContent");
+
   if (content) {
     content.innerHTML = `
-      <div style="padding:1.5rem;">
-        <div style="display:flex; justify-content:space-between; border-bottom:2px solid #15803d; padding-bottom:1rem; margin-bottom:1.25rem;">
+      <div style="padding: 1.5rem; background: #ffffff; border-radius: 12px;">
+        <div style="display: flex; justify-content: space-between; border-bottom: 2px solid var(--brand-primary); padding-bottom: 1rem; margin-bottom: 1.25rem;">
           <div>
-            <img src="./logo.png" alt="Logo" style="height:56px; width:auto; object-fit:contain; margin-bottom:0.5rem;" />
-            <h2 style="font-weight:900; color:#15803d; font-size:1.35rem;">Rohith Groceries</h2>
-            <p style="font-size:0.8rem; color:var(--text-muted);">${store.storeInfo.address}</p>
-            <p style="font-size:0.8rem; color:var(--text-muted);">Phone: +91 ${store.storeInfo.phone}</p>
+            <img src="./logo.png" alt="Rohith Groceries Logo" style="height: 64px; width: auto; object-fit: contain; margin-bottom: 0.5rem;" />
+            <h2 style="font-weight: 900; color: #15803d; font-size: 1.5rem;">Rohith Groceries</h2>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">${store.storeInfo.address}</p>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">Phone: +91 ${store.storeInfo.phone} • WhatsApp: +91 ${store.storeInfo.whatsapp}</p>
           </div>
-          <div style="text-align:right;">
-            <span style="background:#f0fdf4; color:#166534; padding:0.3rem 0.75rem; border-radius:6px; font-weight:800; font-size:0.85rem;">DELIVERY RECEIPT</span>
-            <p style="font-weight:800; margin-top:0.5rem;">#${order.orderId}</p>
-            <p style="font-size:0.75rem; color:var(--text-muted);">${order.timestamp}</p>
-            <p style="font-size:0.75rem; color:#1e40af; font-weight:700; margin-top:0.25rem;">📅 ${order.deliveryDate}</p>
+          <div style="text-align: right;">
+            <span style="background: var(--brand-primary-subtle); color: #166534; padding: 0.3rem 0.75rem; border-radius: 6px; font-weight: 800; font-size: 0.85rem;">TAX INVOICE</span>
+            <p style="font-weight: 800; margin-top: 0.5rem;">Order #${order.orderId}</p>
+            <p style="font-size: 0.75rem; color: var(--text-muted);">${order.timestamp}</p>
+            <p style="font-size: 0.75rem; color: #1e40af; font-weight:700; margin-top:0.25rem;">📅 ${order.deliveryDate || 'Scheduled Delivery'}</p>
           </div>
         </div>
-        <div style="background:#f8fafc; padding:0.85rem; border-radius:8px; margin-bottom:1.25rem; font-size:0.85rem;">
-          <strong>Customer:</strong> ${order.customer.name} | +91 ${order.customer.phone}<br/>
-          <strong>Address:</strong> ${order.customer.address}
+
+        <div style="display: flex; justify-content: space-between; margin-bottom: 1.25rem; font-size: 0.85rem; background: #f8fafc; padding: 0.85rem; border-radius: 8px;">
+          <div>
+            <strong style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">Customer Information:</strong>
+            <div style="font-weight: 800; font-size: 1rem; color: var(--text-main);">${order.customer.name}</div>
+            <div>Phone: +91 ${order.customer.phone}</div>
+            <div>Address: ${order.customer.address}</div>
+          </div>
+          <div style="text-align: right;">
+            <strong style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">Payment Details:</strong>
+            <div style="font-weight: 800; color: #16a34a;">${order.paymentStatus}</div>
+            <div>Mode: ${order.paymentMethod}</div>
+            <div style="margin-top:0.35rem; font-family:monospace; background:#fef3c7; color:#92400e; padding:0.15rem 0.4rem; border-radius:4px; font-weight:800;">Delivery OTP: ${order.otp}</div>
+          </div>
         </div>
-        <table style="width:100%; border-collapse:collapse; font-size:0.85rem; margin-bottom:1.25rem;">
-          <thead><tr style="background:#f1f5f9;">
-            <th style="padding:0.6rem; text-align:left;">Item</th>
-            <th style="padding:0.6rem; text-align:center;">Qty</th>
-            <th style="padding:0.6rem; text-align:right;">Price</th>
-            <th style="padding:0.6rem; text-align:right;">Total</th>
-          </tr></thead>
+
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 1.25rem;">
+          <thead>
+            <tr style="background: #f1f5f9; text-align: left;">
+              <th style="padding: 0.6rem;">Item Description</th>
+              <th style="padding: 0.6rem; text-align: center;">Unit</th>
+              <th style="padding: 0.6rem; text-align: center;">Qty</th>
+              <th style="padding: 0.6rem; text-align: right;">Price</th>
+              <th style="padding: 0.6rem; text-align: right;">Total</th>
+            </tr>
+          </thead>
           <tbody>
-            ${order.items.map(item => `<tr style="border-bottom:1px solid #e2e8f0;">
-              <td style="padding:0.6rem; font-weight:700;">${item.nameEn} <span style="color:#166534; font-family:var(--font-tamil);">(${item.nameTa})</span> — ${item.unit}</td>
-              <td style="padding:0.6rem; text-align:center;">${item.quantity}</td>
-              <td style="padding:0.6rem; text-align:right;">₹${item.price}</td>
-              <td style="padding:0.6rem; text-align:right; font-weight:800;">₹${item.price * item.quantity}</td>
-            </tr>`).join("")}
+            ${order.items.map(item => `
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 0.6rem; font-weight: 700;">
+                  ${item.nameEn} <span style="color:var(--brand-primary-dark); font-family:var(--font-tamil);">(${item.nameTa})</span>
+                </td>
+                <td style="padding: 0.6rem; text-align: center; color: var(--text-muted);">${item.unit}</td>
+                <td style="padding: 0.6rem; text-align: center;">${item.quantity}</td>
+                <td style="padding: 0.6rem; text-align: right;">₹${item.price}</td>
+                <td style="padding: 0.6rem; text-align: right; font-weight: 800;">₹${item.price * item.quantity}</td>
+              </tr>
+            `).join("")}
           </tbody>
         </table>
-        <div style="display:flex; justify-content:flex-end;">
-          <div style="width:200px; font-size:0.9rem;">
-            <div style="display:flex; justify-content:space-between; font-size:1.15rem; font-weight:900; color:#15803d;">
-              <span>Total (COD):</span>
+
+        <div style="display: flex; justify-content: flex-end; border-top: 1px dashed #cbd5e1; padding-top: 0.75rem;">
+          <div style="width: 220px; font-size: 0.9rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+              <span>Subtotal:</span>
+              <span>₹${order.totalAmount}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem; color: #16a34a;">
+              <span>Delivery:</span>
+              <span>FREE</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 1.15rem; font-weight: 900; color: #15803d; border-top: 2px solid #e2e8f0; padding-top: 0.5rem;">
+              <span>Final Total:</span>
               <span>₹${order.totalAmount}</span>
             </div>
           </div>
         </div>
-      </div>`;
+      </div>
+    `;
   }
-  modal?.classList.add("open");
+
+  modal.classList.add("open");
 };
 
 window.closeInvoiceModal = function() {
-  document.getElementById("invoiceModal")?.classList.remove("open");
+  document.getElementById("invoiceModal").classList.remove("open");
 };
 
 // ==========================================================================
-// 11. EVENT LISTENERS & HELPERS
+// 10. EVENT LISTENERS & HELPERS
 // ==========================================================================
 function setupEventListeners() {
-  document.getElementById("productSearchInput")?.addEventListener("input", (e) => {
-    store.searchQuery = e.target.value;
-    renderProductsCatalog();
-  });
+  const searchInput = document.getElementById("productSearchInput");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      store.searchQuery = e.target.value;
+      renderProductsCatalog();
+    });
+  }
 
-  document.getElementById("productSortSelect")?.addEventListener("change", (e) => {
-    store.sortOption = e.target.value;
-    renderProductsCatalog();
-  });
+  const sortSelect = document.getElementById("productSortSelect");
+  if (sortSelect) {
+    sortSelect.addEventListener("change", (e) => {
+      store.sortOption = e.target.value;
+      renderProductsCatalog();
+    });
+  }
 
-  document.getElementById("openCartNavBtn")?.addEventListener("click", openCartDrawer);
-  document.getElementById("closeCartDrawerBtn")?.addEventListener("click", closeCartDrawer);
-  document.getElementById("cartCheckoutBtn")?.addEventListener("click", openCheckoutModal);
-  document.getElementById("closeCheckoutModalBtn")?.addEventListener("click", closeCheckoutModal);
+  const openCartBtn = document.getElementById("openCartNavBtn");
+  if (openCartBtn) openCartBtn.addEventListener("click", openCartDrawer);
+
+  const closeCartBtn = document.getElementById("closeCartDrawerBtn");
+  if (closeCartBtn) closeCartBtn.addEventListener("click", closeCartDrawer);
+
+  const proceedCheckoutBtn = document.getElementById("cartCheckoutBtn");
+  if (proceedCheckoutBtn) proceedCheckoutBtn.addEventListener("click", openCheckoutModal);
+
+  const closeCheckoutBtn = document.getElementById("closeCheckoutModalBtn");
+  if (closeCheckoutBtn) closeCheckoutBtn.addEventListener("click", closeCheckoutModal);
 
   setupCheckoutForm();
 }
@@ -1217,9 +1474,11 @@ function setupEventListeners() {
 function showToast(message, type = "success") {
   const container = document.getElementById("toastContainer");
   if (!container) return;
+
   const toast = document.createElement("div");
   toast.className = `toast-msg ${type}`;
   toast.innerHTML = `<span>${message}</span>`;
+
   container.appendChild(toast);
   setTimeout(() => {
     toast.style.opacity = "0";
@@ -1227,4 +1486,3 @@ function showToast(message, type = "success") {
     setTimeout(() => toast.remove(), 300);
   }, 2800);
 }
-
