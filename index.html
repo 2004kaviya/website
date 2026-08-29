@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rohith Groceries • Fresh Daily Grocery Store</title>
+  
+  <!-- Google Fonts: Plus Jakarta Sans & Tamil Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Mukta+Malar:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ==========================================================================
+       VIEW 1: AUTHENTICATION / LOGIN SCREEN (Official Logo & Custom Login)
+       ========================================================================== -->
+  <section id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <div class="login-header">
+        <!-- Official Store Logo -->
+        <img src="./logo.png" alt="Rohith Groceries Official Logo" class="login-logo-img" />
+        <h1 class="login-title">Rohith Groceries</h1>
+        <p class="login-subtitle">Fresh groceries delivered to your doorstep</p>
+      </div>
+
+      <!-- Customer: Direct Enter Store (No Login Required) -->
+      <div style="margin-bottom: 1.5rem;">
+        <button type="button" id="customerEnterBtn" class="btn-primary-auth" style="width:100%; justify-content:center; font-size:1.1rem; padding:1rem;">
+          🛒 Enter Store
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+        <p style="text-align:center; font-size:0.8rem; color:var(--text-muted); margin-top:0.5rem;">Browse products & place orders — no login required</p>
+      </div>
+
+      <!-- Divider -->
+      <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1.25rem;">
+        <div style="flex:1; height:1px; background:var(--border-light);"></div>
+        <span style="font-size:0.775rem; color:var(--text-muted); font-weight:700; white-space:nowrap;">Admin Login Only</span>
+        <div style="flex:1; height:1px; background:var(--border-light);"></div>
+      </div>
+
+      <!-- Admin Login Form -->
+      <form id="loginForm" class="auth-form" novalidate>
+        <div class="form-group">
+          <label for="usernameInput" class="form-label">Admin Username</label>
+          <div class="input-container">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </span>
+            <input type="text" id="usernameInput" class="form-control" placeholder="Enter username" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="passwordInput" class="form-label">Admin Password</label>
+          <div class="input-container">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </span>
+            <input type="password" id="passwordInput" class="form-control" placeholder="Enter password" />
+          </div>
+        </div>
+
+        <div id="authError" class="auth-error-box hidden"></div>
+
+        <button type="submit" class="btn-primary-auth" style="background: linear-gradient(135deg, #1e40af, #1e3a8a);">
+          <span>🔐 Admin Login</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+      </form>
+    </div>
+  </section>
+
+
+  <!-- ==========================================================================
+       VIEW 2: MAIN STORE PORTAL
+       ========================================================================== -->
+  <div id="appScreen" class="hidden">
+    
+    <!-- TOP NAVIGATION BAR: Straight alignment to shop name -->
+    <header class="site-header">
+      <div class="container nav-container">
+        
+        <!-- Left: Official Logo & Shop Name -->
+        <div class="brand-identity" data-nav-target="home">
+          <img src="./logo.png" alt="Rohith Groceries Logo" class="brand-logo-img" />
+          <div class="brand-text-wrap">
+            <span class="shop-name-title">Rohith Groceries</span>
+            <span class="shop-badge-subtitle">Fresh Daily Essentials</span>
+          </div>
+        </div>
+
+        <!-- Top Menus Aligned Straight to Shop Name -->
+        <nav class="nav-menu-straight" id="navMenuStraight">
+          <a href="#home" class="nav-link-item active" data-nav-target="home">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            <span>Home</span>
+          </a>
+
+          <a href="#about" class="nav-link-item" data-nav-target="about">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            <span>About</span>
+          </a>
+
+          <a href="#products" class="nav-link-item" data-nav-target="products">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+            </svg>
+            <span>Our Products</span>
+          </a>
+
+
+          <a href="#orders" class="nav-link-item admin-only-nav" data-nav-target="orders">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            <span>Order Placed</span>
+            <span class="nav-counter-badge" id="orderPlacedNavBadge">0</span>
+          </a>
+
+          <a href="#transactions" class="nav-link-item admin-only-nav" data-nav-target="transactions">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+            <span>Transaction History</span>
+          </a>
+        </nav>
+
+        <!-- Right Side Nav Actions: Cart & Logout -->
+        <div class="nav-actions">
+          <button type="button" class="btn-cart-nav" id="openCartNavBtn" title="View Cart">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="9" cy="21" r="1"></circle>
+              <circle cx="20" cy="21" r="1"></circle>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+            <span>Cart</span>
+            <span class="cart-bubble cart-count-display">0</span>
+          </button>
+
+          <button type="button" class="btn-logout-nav" id="logoutBtn" title="Logout">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            <span>Logout</span>
+          </button>
+
+          <button type="button" class="mobile-nav-toggle" id="mobileNavToggle" aria-label="Toggle menu">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+      </div>
+    </header>
+
+
+    <!-- ==========================================================================
+         SECTION 1: HOME PAGE (Clean Landing, Official Logo & Delivery Trail)
+         ========================================================================== -->
+    <main id="section-home">
+      <!-- Hero Banner -->
+      <section class="hero-section">
+        <div class="container hero-grid">
+          
+          <!-- LEFT SIDE: 2-Line Store Description -->
+          <div class="hero-content-left">
+            <div class="hero-pill-badge">
+              <span>🌿 100% Pure & Fresh Quality</span>
+              <span>•</span>
+              <span>Daily Local Delivery</span>
+            </div>
+
+            <h1 class="hero-heading">
+              Fresh Daily Essentials at <span class="highlight">Rohith Groceries</span>
+            </h1>
+
+            <!-- EXACT 2-LINE STORE DESCRIPTION -->
+            <div class="two-line-store-description">
+              <p class="desc-line-1">
+                <strong>Rohith Groceries</strong> is your trusted neighborhood grocery store offering 100% fresh, authentic, and handpicked daily essentials at the best prices.
+              </p>
+              <p class="desc-line-2">
+                From organic dals, fresh spices, and premium grains to household cleaning essentials, we guarantee lightning-fast home delivery straight to your doorstep.
+              </p>
+            </div>
+
+            <!-- Single Clean Primary Action Button (No repeated nav buttons) -->
+            <div class="hero-action-row">
+              <button type="button" class="btn-hero-primary" onclick="switchTab('products')">
+                <span>Explore Our Products</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- RIGHT SIDE: Official Store Logo Display -->
+          <div class="hero-logo-right">
+            <div class="logo-display-card">
+              <img src="./logo.png" alt="Rohith Groceries Logo" class="hero-logo-img" />
+              <div style="margin-top: 1rem; display: inline-flex; align-items: center; gap: 0.4rem; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 0.45rem 1rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 800; color: #166534;">
+                <span>✨ 100% Quality & Freshness Guarantee</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ANIMATED CARTOON DELIVERY JOURNEY TRAIL -->
+      <section class="delivery-trail-section">
+        <div class="container">
+          <div class="trail-container-card">
+            
+            <div class="trail-header">
+              <h3>⚡ How Your Grocery Order Reaches You</h3>
+              <p>Real-time tracked delivery from our store straight to your kitchen</p>
+            </div>
+
+            <!-- 4-Step Animated Trail -->
+            <div class="trail-steps-grid">
+              
+              <div class="trail-step-box active-step">
+                <span class="step-num-pill">Step 1</span>
+                <div class="step-cartoon-icon">🛒</div>
+                <div class="step-title">Order Placed</div>
+                <div class="step-desc">Instant confirmation with order ID & delivery OTP</div>
+              </div>
+
+              <div class="trail-step-box">
+                <span class="step-num-pill">Step 2</span>
+                <div class="step-cartoon-icon">📦</div>
+                <div class="step-title">Packed with Care</div>
+                <div class="step-desc">Hygienic packing of fresh provisions and staples</div>
+              </div>
+
+              <div class="trail-step-box">
+                <span class="step-num-pill">Step 3</span>
+                <div class="step-cartoon-icon">🛵</div>
+                <div class="step-title">Out for Delivery</div>
+                <div class="step-desc">Local delivery boy dispatched to your doorstep</div>
+              </div>
+
+              <div class="trail-step-box">
+                <span class="step-num-pill">Step 4</span>
+                <div class="step-cartoon-icon">🏡</div>
+                <div class="step-title">Delivered & Settled</div>
+                <div class="step-desc">Safe handover, OTP verification & digital receipt</div>
+              </div>
+
+            </div>
+
+            <!-- Moving Scooter Track -->
+            <div class="scooter-track">
+              <div class="scooter-progress-bar"></div>
+            </div>
+
+            <div style="text-align: center; margin-top: 1.25rem;">
+              <button class="btn-hero-primary" onclick="switchTab('products')" style="padding: 0.75rem 1.75rem;">
+                Start Shopping Now →
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </section>
+    </main>
+
+
+    <!-- ==========================================================================
+         SECTION 2: ABOUT STORE PAGE (With Editable Store Details)
+         ========================================================================== -->
+    <section id="section-about" class="about-section-container hidden">
+      <div class="container">
+        
+        <!-- About Hero Card -->
+        <div class="about-hero-card">
+          <div>
+            <h1 style="font-size: 2.25rem; font-weight: 900; margin-bottom: 0.5rem;">About Rohith Groceries</h1>
+            <p style="font-size: 1.1rem; color: #bbf7d0; max-width: 650px;">
+              Serving our community with 100% pure groceries, fresh provisions, wholesale rates, and fast doorstep delivery.
+            </p>
+          </div>
+          <button type="button" class="btn-edit-contact" onclick="openEditContactModal()" style="background:white; color:#15803d; padding:0.75rem 1.25rem; font-size:0.9rem;">
+            <span>✏️ Edit Store Details</span>
+          </button>
+        </div>
+
+        <div class="about-content-grid">
+          
+          <!-- Story -->
+          <div class="about-details-card">
+            <h3 style="font-size: 1.3rem; font-weight: 900; color: var(--text-main); margin-bottom: 1rem; display:flex; align-items:center; gap:0.5rem;">
+              <span>🌾</span> Our Commitment to Quality
+            </h3>
+            <p style="color: #475569; margin-bottom: 1rem; line-height: 1.7;">
+              <strong>Rohith Groceries</strong> was founded to ensure every household receives authentic, pure, and triple-checked daily groceries at honest neighborhood prices.
+            </p>
+            <p style="color: #475569; line-height: 1.7;">
+              We source our dals, basmati rice, aromatic masalas, and cooking oils directly from verified suppliers, packed hygienically, and delivered to your doorstep.
+            </p>
+          </div>
+
+          <!-- Store Info Card (Dynamically updated) -->
+          <div class="about-store-info-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+              <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--text-main);">Store Information</h3>
+              <button type="button" class="btn-edit-contact" onclick="openEditContactModal()">✏️ Edit</button>
+            </div>
+
+            <div class="store-meta-list">
+              <div class="meta-row">
+                <div class="meta-icon-bubble">🏪</div>
+                <div>
+                  <div class="meta-text-title">Store Name</div>
+                  <div class="meta-text-value">Rohith Groceries</div>
+                </div>
+              </div>
+
+              <div class="meta-row">
+                <div class="meta-icon-bubble">👤</div>
+                <div>
+                  <div class="meta-text-title">Proprietor</div>
+                  <div class="meta-text-value store-proprietor-val">Rohith Kumar</div>
+                </div>
+              </div>
+
+              <div class="meta-row">
+                <div class="meta-icon-bubble">🕒</div>
+                <div>
+                  <div class="meta-text-title">Operating Hours</div>
+                  <div class="meta-text-value store-hours-val">Mon - Sun (6:30 AM – 10:30 PM)</div>
+                </div>
+              </div>
+
+              <div class="meta-row">
+                <div class="meta-icon-bubble">📍</div>
+                <div>
+                  <div class="meta-text-title">Store Location</div>
+                  <div class="meta-text-value store-address-val">#42, Market Main Road, Near Clock Tower, Gandhi Bazaar, Bengaluru - 560004</div>
+                </div>
+              </div>
+
+              <div class="meta-row">
+                <div class="meta-icon-bubble">📞</div>
+                <div>
+                  <div class="meta-text-title">Phone Support</div>
+                  <div class="meta-text-value store-phone-val">+91 9876543210</div>
+                </div>
+              </div>
+
+              <div class="meta-row">
+                <div class="meta-icon-bubble">💬</div>
+                <div>
+                  <div class="meta-text-title">WhatsApp Order Desk</div>
+                  <div class="meta-text-value store-whatsapp-val">+91 9876543211</div>
+                </div>
+              </div>
+
+              <div class="meta-row">
+                <div class="meta-icon-bubble">✉️</div>
+                <div>
+                  <div class="meta-text-title">Email</div>
+                  <div class="meta-text-value store-email-val">orders@rohithgroceries.com</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ==========================================================================
+         SECTION 3: OUR PRODUCTS (Bilingual English + Tamil, Search, Filters & CRUD)
+         ========================================================================== -->
+    <section id="section-products" class="products-section-container hidden">
+      <div class="container">
+        
+        <!-- Products Toolbar -->
+        <div class="products-toolbar">
+          
+          <div class="toolbar-top-row">
+            <!-- Search Input (English & Tamil search) -->
+            <div class="product-search-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input 
+                type="text" 
+                id="productSearchInput" 
+                class="product-search-input" 
+                placeholder="Search salt, sugar, toor dal, பருப்பு, மசாலா, clinic plus, surf excel..." 
+              />
+            </div>
+
+            <!-- Sort By & Store Management Buttons -->
+            <div class="toolbar-actions-wrap">
+              <select id="productSortSelect" class="toolbar-sort-select">
+                <option value="featured">Featured Best Sellers</option>
+                <option value="price-low">Price: Low to High</option>
+                <option value="price-high">Price: High to Low</option>
+                <option value="name-az">Name: A to Z</option>
+              </select>
+
+              <!-- Add New Product Button (Admin Only) -->
+              <button type="button" class="btn-add-new-prod admin-only-btn" onclick="openAddProductModal()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>+ Add New Product</span>
+              </button>
+
+              <!-- Manage Stock Mode Toggle (Admin Only) -->
+              <button type="button" class="btn-toggle-inventory-mode admin-only-btn" id="toggleManagerModeBtn" onclick="toggleStoreManagerMode()">
+                <span>⚙️ Manage Stock</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Category Chips -->
+          <div class="category-filter-chips">
+            <button type="button" class="filter-chip active" data-category="all" onclick="filterCategory('all')">All Products (<span id="catCountAll">0</span>)</button>
+            <button type="button" class="filter-chip" data-category="dals" onclick="filterCategory('dals')">🌾 Dals & Pulses (பருப்பு)</button>
+            <button type="button" class="filter-chip" data-category="spices" onclick="filterCategory('spices')">🌶️ Spices & Masalas (மசாலா)</button>
+            <button type="button" class="filter-chip" data-category="rice-flour" onclick="filterCategory('rice-flour')">🍚 Rice & Atta (அரிசி மாவு)</button>
+            <button type="button" class="filter-chip" data-category="oils-sugar-salt" onclick="filterCategory('oils-sugar-salt')">🧂 Oils & Salt/Sugar (எண்ணெய்)</button>
+            <button type="button" class="filter-chip" data-category="soaps" onclick="filterCategory('soaps')">🧼 Soaps & Hygiene (சோப்)</button>
+            <button type="button" class="filter-chip" data-category="shampoos" onclick="filterCategory('shampoos')">🧴 Hair & Shampoos (ஷாம்பு)</button>
+            <button type="button" class="filter-chip" data-category="snacks-beverages" onclick="filterCategory('snacks-beverages')">☕ Tea & Snacks (டீ காபி)</button>
+            <button type="button" class="filter-chip" data-category="cleaning" onclick="filterCategory('cleaning')">🫧 Cleaning (சுத்தம்)</button>
+            <button type="button" class="filter-chip" data-category="out-of-stock" onclick="filterCategory('out-of-stock')" style="color:#ef4444; border-color:#fca5a5;">❌ Out of Stock (<span id="outOfStockCount">0</span>)</button>
+          </div>
+
+        </div>
+
+        <div class="products-count-label" id="productsCountLabel" style="font-size:0.85rem; font-weight:700; color:var(--text-muted); margin-bottom:1rem;">
+          Showing grocery items
+        </div>
+
+        <!-- Bilingual Products Grid -->
+        <div class="products-grid" id="productsGrid">
+          <!-- Populated by script.js -->
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ==========================================================================
+         SECTION 4: ORDER PLACED DASHBOARD (With Delivery Date, Auto Timer & Delete)
+         ========================================================================== -->
+    <section id="section-orders" class="orders-section-container hidden">
+      <div class="container">
+        
+        <div class="orders-top-control-bar">
+          <div>
+            <h1 style="font-size: 1.75rem; font-weight: 900; color: var(--text-main);">Customer Orders</h1>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">All customer orders sent via WhatsApp — Admin view only</p>
+          </div>
+
+          <!-- Admin controls: Delete old orders -->
+          <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:wrap;">
+            <button type="button" class="btn-order-action danger" onclick="handleClearPastOrders()">
+              🧹 Clear All Orders
+            </button>
+          </div>
+        </div>
+
+        <!-- Orders List Grid -->
+        <div id="ordersListGrid">
+          <!-- Populated by script.js -->
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ==========================================================================
+         SECTION 5: TRANSACTION HISTORY LEDGER
+         ========================================================================== -->
+    <section id="section-transactions" class="transactions-section-container hidden">
+      <div class="container">
+        
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:1.75rem; flex-wrap:wrap; gap:1rem;">
+          <div>
+            <h1 style="font-size: 1.75rem; font-weight: 900; color: var(--text-main);">Store Transaction History</h1>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Real-time synchronized sales ledger, revenue summaries, and tax invoices</p>
+          </div>
+          <button type="button" class="btn-hero-primary" onclick="exportTransactionsCSV()" style="padding: 0.65rem 1.25rem; font-size: 0.85rem;">
+            📥 Export CSV Ledger
+          </button>
+        </div>
+
+        <!-- KPI Metrics -->
+        <div class="stats-summary-grid">
+          <div class="stat-card-widget">
+            <div class="stat-icon-wrap">₹</div>
+            <div>
+              <div class="stat-label-text">Total Store Sales</div>
+              <div class="stat-number-val" id="statTotalRevenue">₹0</div>
+            </div>
+          </div>
+
+          <div class="stat-card-widget">
+            <div class="stat-icon-wrap" style="background:#eff6ff; color:#2563eb;">🧾</div>
+            <div>
+              <div class="stat-label-text">Completed Orders</div>
+              <div class="stat-number-val" id="statTotalTxns">0</div>
+            </div>
+          </div>
+
+          <div class="stat-card-widget">
+            <div class="stat-icon-wrap" style="background:#fffbeb; color:#d97706;">📊</div>
+            <div>
+              <div class="stat-label-text">Avg. Order Value</div>
+              <div class="stat-number-val" id="statAvgOrder">₹0</div>
+            </div>
+          </div>
+
+          <div class="stat-card-widget">
+            <div class="stat-icon-wrap" style="background:#f0fdf4; color:#16a34a;">🛵</div>
+            <div>
+              <div class="stat-label-text">Active Deliveries</div>
+              <div class="stat-number-val" id="statPendingCount">0</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ledger Table -->
+        <div class="ledger-card-table-wrap">
+          <div class="ledger-table-header">
+            <h3 style="font-size: 1.1rem; font-weight: 800;">Recent Transaction Entries</h3>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Automatic real-time ledger</span>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="ledger-table">
+              <thead>
+                <tr>
+                  <th>Txn Ref</th>
+                  <th>Order #</th>
+                  <th>Date & Time</th>
+                  <th>Customer Info</th>
+                  <th>Amount</th>
+                  <th>Payment Mode</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="transactionLedgerBody">
+                <!-- Populated by script.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ==========================================================================
+         CART DRAWER (Slide-out)
+         ========================================================================== -->
+    <div id="cartDrawerBackdrop" class="cart-drawer-backdrop">
+      <div class="cart-drawer">
+        
+        <div class="cart-header">
+          <h3 style="font-size: 1.2rem; font-weight: 900; display:flex; align-items:center; gap:0.5rem;">
+            <span>Your Grocery Cart (<span class="cart-count-display">0</span>)</span>
+          </h3>
+          <button type="button" class="btn-close-drawer" id="closeCartDrawerBtn" aria-label="Close cart">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="cart-items-body" id="cartItemsBody">
+          <!-- Populated by script.js -->
+        </div>
+
+        <div class="cart-footer">
+          <div style="display:flex; justify-content:space-between; font-size:0.875rem; color:var(--text-muted);">
+            <span>Items Subtotal:</span>
+            <span id="cartSubtotalVal">₹0</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:0.875rem; color:var(--text-muted);">
+            <span>Local Delivery:</span>
+            <span id="cartDeliveryVal" style="color: #16a34a; font-weight: 800;">FREE</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:1.2rem; font-weight:900; color:var(--brand-primary-dark); border-top:1px dashed var(--border-light); padding-top:0.5rem;">
+            <span>Estimated Total:</span>
+            <span id="cartTotalVal">₹0</span>
+          </div>
+
+          <button type="button" class="btn-hero-primary" id="cartCheckoutBtn" style="width:100%; justify-content:center; padding:0.85rem;">
+            <span>Proceed to Place Order</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+
+    <!-- ==========================================================================
+         CHECKOUT MODAL (With Delivery Date & Time Slot Selection)
+         ========================================================================== -->
+    <div id="checkoutModal" class="modal-overlay">
+      <div class="modal-dialog">
+        
+        <div class="modal-dialog-header">
+          <div>
+            <h3 style="font-weight: 900; font-size: 1.25rem; color: var(--text-main);">Place Customer Order</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">Select scheduled delivery date & address</p>
+          </div>
+          <button type="button" class="btn-close-drawer" id="closeCheckoutModalBtn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <form id="checkoutForm" class="modal-dialog-body" novalidate>
+          
+          <div class="form-group">
+            <label class="form-label">Order Items Summary</label>
+            <div id="checkoutItemsMini" style="background:var(--bg-subtle); padding:0.85rem; border-radius:8px; max-height:120px; overflow-y:auto;">
+              <!-- Populated by script.js -->
+            </div>
+          </div>
+
+          <!-- Customer Name & Phone -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+            <div class="form-group">
+              <label for="custNameInput" class="form-label">Customer Name <span style="color:#ef4444;">*</span></label>
+              <input type="text" id="custNameInput" class="form-control" placeholder="e.g. Rohith Kumar" required />
+            </div>
+
+            <div class="form-group">
+              <label for="custPhoneInput" class="form-label">Phone Number <span style="color:#ef4444;">*</span></label>
+              <input type="tel" id="custPhoneInput" class="form-control" placeholder="e.g. 9876543210" required />
+            </div>
+          </div>
+
+          <!-- Scheduled Delivery Date & Time Slot -->
+          <div class="form-group">
+            <label for="custDeliveryDateSlot" class="form-label">📅 Preferred Delivery Date & Slot <span style="color:#ef4444;">*</span></label>
+            <select id="custDeliveryDateSlot" class="form-control" required>
+              <option value="Today (Within 30-45 Mins Express)">⚡ Today (Within 30-45 Mins Express Delivery)</option>
+              <option value="Today Evening (5:00 PM - 8:00 PM)">🌆 Today Evening (5:00 PM - 8:00 PM)</option>
+              <option value="Tomorrow Morning (8:00 AM - 11:00 AM)">🌅 Tomorrow Morning (8:00 AM - 11:00 AM)</option>
+              <option value="Tomorrow Afternoon (1:00 PM - 4:00 PM)">☀️ Tomorrow Afternoon (1:00 PM - 4:00 PM)</option>
+              <option value="Tomorrow Evening (5:00 PM - 8:00 PM)">🌆 Tomorrow Evening (5:00 PM - 8:00 PM)</option>
+            </select>
+          </div>
+
+          <!-- Address -->
+          <div class="form-group">
+            <label for="custAddressInput" class="form-label">Delivery Address <span style="color:#ef4444;">*</span></label>
+            <textarea id="custAddressInput" rows="2" class="form-control" placeholder="House/Flat No, Street, Area, City - Pincode" required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="custLandmarkInput" class="form-label">Nearby Landmark (Optional)</label>
+            <input type="text" id="custLandmarkInput" class="form-control" placeholder="Near Clock Tower / Temple" />
+          </div>
+
+          <!-- Payment Mode: Cash on Delivery ONLY -->
+          <div class="form-group">
+            <label class="form-label">Payment Mode</label>
+            <div style="display:flex; align-items:center; gap:0.75rem; background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; padding:0.75rem 1rem;">
+              <span style="font-size:1.2rem;">💵</span>
+              <div>
+                <div style="font-weight:800; color:#166534;">Cash on Delivery (COD)</div>
+                <div style="font-size:0.775rem; color:#4b7c4b;">Pay when your groceries arrive at your doorstep</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Total & Submit -->
+          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-light); padding-top:1rem;">
+            <div>
+              <span style="font-size:0.8rem; color:var(--text-muted);">Total Payable:</span>
+              <div id="checkoutTotalDisplay" style="font-size:1.4rem; font-weight:900; color:#15803d;">₹0</div>
+            </div>
+            <button type="submit" class="btn-hero-primary" style="padding:0.85rem 1.75rem;">
+              <span>Confirm & Place Order</span>
+            </button>
+          </div>
+
+        </form>
+
+      </div>
+    </div>
+
+
+    <!-- ==========================================================================
+         ORDER SUCCESS CONFIRMATION MODAL
+         ========================================================================== -->
+    <div id="orderConfirmationModal" class="modal-overlay">
+      <div class="modal-dialog">
+        <div class="modal-dialog-body" id="orderConfirmationMsgDetails">
+          <!-- Populated by script.js -->
+        </div>
+        <div style="padding:1rem 1.5rem 1.5rem; display:flex; gap:0.75rem; justify-content:center; border-top:1px solid var(--border-light);">
+          <button type="button" class="btn-hero-primary" onclick="closeOrderSuccessModal(); switchTab('products');" style="padding:0.85rem 2rem; font-size:1rem;">
+            🛒 Continue Shopping
+          </button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ==========================================================================
+         ADD NEW PRODUCT MODAL (With English & Tamil Name)
+         ========================================================================== -->
+    <div id="addProductModal" class="modal-overlay">
+      <div class="modal-dialog">
+        <div class="modal-dialog-header">
+          <div>
+            <h3 style="font-weight: 900; font-size: 1.25rem; color: var(--text-main);">Add New Grocery Item</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">Add new products to your store catalog</p>
+          </div>
+          <button type="button" class="btn-close-drawer" onclick="closeAddProductModal()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <form id="addProductForm" class="modal-dialog-body" onsubmit="handleSaveNewProduct(event)">
+          
+          <!-- English & Tamil Name -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+            <div class="form-group">
+              <label for="newProdName" class="form-label">Product Name (English) <span style="color:#ef4444;">*</span></label>
+              <input type="text" id="newProdName" class="form-control" placeholder="e.g. Organic Cow Ghee" required />
+            </div>
+
+            <div class="form-group">
+              <label for="newProdNameTa" class="form-label">Product Name (தமிழ்) <span style="color:#ef4444;">*</span></label>
+              <input type="text" id="newProdNameTa" class="form-control" placeholder="எ.கா. தூய பசும் நெய்" required />
+            </div>
+          </div>
+
+          <!-- Category & Unit -->
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+            <div class="form-group">
+              <label for="newProdCategory" class="form-label">Category <span style="color:#ef4444;">*</span></label>
+              <select id="newProdCategory" class="form-control" required>
+                <option value="dals">🌾 Dals & Pulses (பருப்பு)</option>
+                <option value="spices">🌶️ Spices & Masalas (மசாலா)</option>
+                <option value="rice-flour">🍚 Rice & Atta (அரிசி மாவு)</option>
+                <option value="oils-sugar-salt">🧂 Oils & Salt/Sugar (எண்ணெய்)</option>
+                <option value="soaps">🧼 Soaps & Hygiene (சோப்)</option>
+                <option value="shampoos">🧴 Hair & Shampoos (ஷாம்பு)</option>
+                <option value="snacks-beverages">☕ Tea & Snacks (டீ காபி)</option>
+                <option value="cleaning">🫧 Cleaning & Home (சுத்தம்)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="newProdUnit" class="form-label">Weight / Unit <span style="color:#ef4444;">*</span></label>
+              <input type="text" id="newProdUnit" class="form-control" placeholder="e.g. 1 kg, 500 ml, Pack of 4" required />
+            </div>
+          </div>
+
+          <!-- Price, MRP, Stock -->
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.75rem;">
+            <div class="form-group">
+              <label for="newProdPrice" class="form-label">Selling Price (₹) <span style="color:#ef4444;">*</span></label>
+              <input type="number" id="newProdPrice" class="form-control" placeholder="150" min="1" required />
+            </div>
+
+            <div class="form-group">
+              <label for="newProdMrp" class="form-label">MRP Price (₹) <span style="color:#ef4444;">*</span></label>
+              <input type="number" id="newProdMrp" class="form-control" placeholder="180" min="1" required />
+            </div>
+
+            <div class="form-group">
+              <label for="newProdStock" class="form-label">Stock Qty <span style="color:#ef4444;">*</span></label>
+              <input type="number" id="newProdStock" class="form-control" placeholder="50" min="0" required />
+            </div>
+          </div>
+
+          <!-- Stock Status Option -->
+          <div class="form-group">
+            <label class="form-label">Stock Status</label>
+            <div style="display:flex; gap:1.5rem;">
+              <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.85rem; font-weight:700; cursor:pointer;">
+                <input type="radio" name="newProdStatus" value="in-stock" checked />
+                <span style="color:#16a34a;">● In Stock</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:0.4rem; font-size:0.85rem; font-weight:700; cursor:pointer;">
+                <input type="radio" name="newProdStatus" value="out-of-stock" />
+                <span style="color:#ef4444;">● Out of Stock</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Emoji Picker -->
+          <div class="form-group">
+            <label class="form-label">Product Icon</label>
+            <div class="emoji-grid-select" id="newProdEmojiList">
+              <button type="button" class="emoji-option-btn active" onclick="selectNewProdEmoji('🌾', this)">🌾</button>
+              <button type="button" class="emoji-option-btn" onclick="selectNewProdEmoji('🌶️', this)">🌶️</button>
+              <button type="button" class="emoji-option-btn" onclick="selectNewProdEmoji('🍚', this)">🍚</button>
+              <button type="button" class="emoji-option-btn" onclick="selectNewProdEmoji('🧂', this)">🧂</button>
+              <button type="button" class="emoji-option-btn" onclick="selectNewProdEmoji('🍬', this)">🍬</button>
+              <button type="button" class="emoji-option-btn" onclick="selectNewProdEmoji('🌻', this)">🌻</button>
+              <button type="button" class="emoji-option-btn" onclick="selectNewProdEmoji('🧼', this)">🧼</button>
+              <button type="button" class="emoji-option-btn" onclick="selectNewProdEmoji('🧴', this)">🧴</button>
+              <button type="button" class="emoji-option-btn" onclick="selectNewProdEmoji('☕', this)">☕</button>
+              <button type="button" class="emoji-option-btn" onclick="selectNewProdEmoji('🍪', this)">🍪</button>
+              <button type="button" class="emoji-option-btn" onclick="selectNewProdEmoji('🍜', this)">🍜</button>
+              <button type="button" class="emoji-option-btn" onclick="selectNewProdEmoji('🫧', this)">🫧</button>
+            </div>
+            <input type="hidden" id="selectedNewEmoji" value="🌾" />
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:0.75rem; border-top:1px solid var(--border-light); padding-top:1rem;">
+            <button type="button" class="btn-hero-secondary" onclick="closeAddProductModal()">Cancel</button>
+            <button type="submit" class="btn-hero-primary">Save to Store</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+
+    <!-- ==========================================================================
+         EDIT STORE / CONTACT DETAILS MODAL
+         ========================================================================== -->
+    <div id="editContactModal" class="modal-overlay">
+      <div class="modal-dialog">
+        <div class="modal-dialog-header">
+          <div>
+            <h3 style="font-weight: 900; font-size: 1.25rem; color: var(--text-main);">Edit Store Contact & Info</h3>
+            <p style="font-size: 0.8rem; color: var(--text-muted);">Update store details anytime</p>
+          </div>
+          <button type="button" class="btn-close-drawer" onclick="closeEditContactModal()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <form id="editContactForm" class="modal-dialog-body" onsubmit="handleSaveStoreDetails(event)">
+          <div class="form-group">
+            <label for="editStoreProprietor" class="form-label">Proprietor Name</label>
+            <input type="text" id="editStoreProprietor" class="form-control" required />
+          </div>
+
+          <div class="form-group">
+            <label for="editStoreHours" class="form-label">Operating Hours</label>
+            <input type="text" id="editStoreHours" class="form-control" required />
+          </div>
+
+          <div class="form-group">
+            <label for="editStoreAddress" class="form-label">Store Physical Address</label>
+            <textarea id="editStoreAddress" rows="2" class="form-control" required></textarea>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+            <div class="form-group">
+              <label for="editStorePhone" class="form-label">Phone Support</label>
+              <input type="tel" id="editStorePhone" class="form-control" required />
+            </div>
+
+            <div class="form-group">
+              <label for="editStoreWhatsApp" class="form-label">WhatsApp Order Desk</label>
+              <input type="tel" id="editStoreWhatsApp" class="form-control" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="editStoreEmail" class="form-label">Store Email Address</label>
+            <input type="email" id="editStoreEmail" class="form-control" required />
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:0.75rem; border-top:1px solid var(--border-light); padding-top:1rem;">
+            <button type="button" class="btn-hero-secondary" onclick="closeEditContactModal()">Cancel</button>
+            <button type="submit" class="btn-hero-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+
+    <!-- ==========================================================================
+         TAX INVOICE VIEWER MODAL
+         ========================================================================== -->
+    <div id="invoiceModal" class="modal-overlay">
+      <div class="modal-dialog" style="max-width: 650px;">
+        <div class="modal-dialog-header">
+          <h3 style="font-weight: 900;">Order Tax Invoice</h3>
+          <button type="button" class="btn-close-drawer" onclick="closeInvoiceModal()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div id="invoiceModalContent">
+          <!-- Populated by script.js -->
+        </div>
+        <div style="padding: 1rem 1.5rem; display: flex; justify-content: flex-end; gap: 0.5rem; border-top: 1px solid var(--border-light);">
+          <button type="button" class="btn-hero-secondary" onclick="window.print()">🖨️ Print Invoice</button>
+          <button type="button" class="btn-hero-primary" onclick="closeInvoiceModal()">Close</button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ==========================================================================
+         STORE FOOTER
+         ========================================================================== -->
+    <footer class="site-footer">
+      <div class="container">
+        
+        <div class="footer-grid">
+          
+          <div class="footer-brand">
+            <img src="./logo.png" alt="Rohith Groceries Logo" style="height: 52px; width: auto; object-fit: contain; margin-bottom: 0.75rem;" />
+            <p>Your neighborhood grocery store delivering 100% fresh, authentic provisions, spices, grains, and household essentials directly to your home.</p>
+            <p style="margin-top: 0.75rem; color: #64748b; font-size: 0.8rem;" class="store-address-val"></p>
+          </div>
+
+          <div class="footer-col">
+            <h4>Store Menus</h4>
+            <ul class="footer-links">
+              <li><a href="#home" onclick="switchTab('home')">Home Store</a></li>
+              <li><a href="#about" onclick="switchTab('about')">About Rohith Groceries</a></li>
+              <li><a href="#products" onclick="switchTab('products')">Our Products</a></li>
+              <li><a href="#orders" onclick="switchTab('orders')">Order Placed</a></li>
+              <li><a href="#transactions" onclick="switchTab('transactions')">Transaction History</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-col">
+            <h4>Top Categories</h4>
+            <ul class="footer-links">
+              <li><a href="#products" onclick="switchTab('products'); filterCategory('dals');">🌾 Dals & Pulses (பருப்பு)</a></li>
+              <li><a href="#products" onclick="switchTab('products'); filterCategory('spices');">🌶️ Spices & Masalas (மசாலா)</a></li>
+              <li><a href="#products" onclick="switchTab('products'); filterCategory('rice-flour');">🍚 Rice & Atta (அரிசி மாவு)</a></li>
+              <li><a href="#products" onclick="switchTab('products'); filterCategory('soaps');">🧼 Soaps & Hygiene (சோப்)</a></li>
+              <li><a href="#products" onclick="switchTab('products'); filterCategory('shampoos');">🧴 Shampoos (ஷாம்பு)</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-col">
+            <h4>Customer Support</h4>
+            <ul class="footer-links">
+              <li><span>📞 Phone: <span class="store-phone-val"></span></span></li>
+              <li><span>💬 WhatsApp: <span class="store-whatsapp-val"></span></span></li>
+              <li><span>✉️ <span class="store-email-val"></span></span></li>
+              <li><span>🕒 <span class="store-hours-val"></span></span></li>
+            </ul>
+          </div>
+
+        </div>
+
+        <div class="footer-bottom">
+          <p>© 2026 Rohith Groceries. All rights reserved. 100% Quality Guaranteed.</p>
+          <p>End-to-End Secure • Fast Local Delivery</p>
+        </div>
+
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Application Engine Script -->
+  <script src="script.js"></script>
+</body>
+</html>
